@@ -26,6 +26,7 @@ YouTube ライブ配信のチャットリプレイを取得・分析し、配信
 | [docs/architecture.md](docs/architecture.md) | 技術アーキテクチャ・分析 Pipeline |
 | [docs/development-process.md](docs/development-process.md) | 開発プロセス・ブランチ戦略 |
 | [docs/ui-spec.md](docs/ui-spec.md) | 画面仕様・UI 設計 |
+| [docs/api-spec.md](docs/api-spec.md) | API 詳細仕様（`/api/v1`） |
 | [docs/phase-1-checklist.md](docs/phase-1-checklist.md) | 第一弾チェックリスト |
 
 ## 開発

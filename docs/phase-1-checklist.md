@@ -26,7 +26,7 @@
 
 - [x] [overview.md](overview.md) — 定位・ターゲット・フェーズ
 - [x] [requirements.md](requirements.md) — FR・優先順位・UI タブ案
-- [x] [architecture.md](architecture.md) — 取得フロー・分析 Pipeline Stage 0–8
+- [x] [architecture.md](architecture.md) — 取得フロー・分析 Pipeline・**技術選定根拠**・POC 開発環境
 
 ### 1. 画面仕様 / ワイヤー — `docs/ui-spec`
 
@@ -38,10 +38,11 @@
 
 ### 2. API 詳細仕様 — `docs/api-spec`
 
-- [ ] エンドポイント一覧（architecture 案を具体化）
-- [ ] リクエスト / レスポンス JSON スキーマ
-- [ ] ステータスコード・エラー形式
-- [ ] ジョブ状態遷移（pending → fetched → analyzed）
+- [x] エンドポイント一覧（`/api/v1`）
+- [x] リクエスト / レスポンス JSON スキーマ
+- [x] ステータスコード・エラー形式
+- [x] ジョブ状態遷移（fetch / analysis）
+- [x] POC: 認証なし、CORS、別ポート開発
 
 ### 3. DB スキーマ詳細 — `docs/db-schema`
 
@@ -118,7 +119,7 @@
 | 区分 | 完了 | 合計 |
 |------|:----:|:----:|
 | 設計 0（骨格） | 3 | 3 |
-| 設計 1–6 | 2 | 6 |
+| 設計 1–6 | 3 | 6 |
 | 実装 | 0 | — |
 
-**次のアクション**: D-2 `docs/api-spec` ブランチ → API 詳細仕様
+**次のアクション**: D-3 `docs/db-schema` ブランチ → DB スキーマ詳細

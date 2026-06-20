@@ -1,7 +1,6 @@
 # LiveChatScope — 要件定義
 
-> ブランチ: `docs/requirements-phase`  
-> 主ターゲット: **個人配信者**（Phase A 以降で随時更新）
+> 主ターゲット: **個人配信者**
 
 ## 1. 目的
 

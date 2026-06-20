@@ -156,7 +156,7 @@
 | 要素 | 仕様 |
 |------|------|
 | URL 入力 | `Input` 1 行。placeholder: `https://www.youtube.com/watch?v=...` |
-| 開始ボタン | URL バリデーション OK で活性。クリック → POST `/api/videos` → 進捗へ |
+| 開始ボタン | URL バリデーション OK で活性。クリック → POST `/api/v1/videos` → 進捗へ |
 | エラー | インライン Alert（無効 URL / リプレイ無効 / 取得失敗） |
 | 履歴（仮・盛る） | 直近分析 3 件のリンク一覧（localStorage）。第一弾は **あればよい** |
 
@@ -185,7 +185,7 @@
 |------|------|
 | ステップ表示 | ① 取得 ② 分析（Stage 進捗は詳細化可） |
 | プログレス | `Progress` + 件数 / メッセージ |
-| ポーリング | `GET /api/videos/{id}/status` 2–3 秒間隔 |
+| ポーリング | `GET /api/v1/videos/{id}/status` 2–3 秒間隔 |
 | 完了 | `analysis_status = complete` → `/videos/{id}?tab=summary` |
 | 失敗 | Alert + 理由 + 「トップに戻る」 |
 
@@ -217,7 +217,7 @@
 
 | コンポーネント | データソース |
 |----------------|--------------|
-| KPI Cards | `GET /api/videos/{id}/summary` |
+| KPI Cards | `GET /api/v1/videos/{id}/summary` |
 | 構成タイムライン | summary + topic_blocks |
 | Top 盛り上がり | highlights Top 5 |
 | Top キーワード | keyword_stats Top 10 |

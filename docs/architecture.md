@@ -1,7 +1,6 @@
 # LiveChatScope — 技術アーキテクチャ
 
-> 要件: [requirements.md](requirements.md)  
-> ブランチ: `docs/requirements-phase`
+> 要件: [requirements.md](requirements.md) | API 詳細: [api-spec.md](api-spec.md) | UI: [ui-spec.md](ui-spec.md)
 
 ## 全体構成
 
@@ -16,18 +15,110 @@
    └─ Storage         … DB（messages + analysis 派生テーブル）
 ```
 
-## 推奨スタック（案）
+## 確定スタック
 
 | レイヤ | 技術 | 備考 |
 |--------|------|------|
-| 取得 Worker | Python + chat-downloader | リプレイ取得の実績 |
-| 分析 | Python（pandas 相当 or 素の SQL + 軽量処理） | Worker と同一プロセス可（MVP） |
-| 形態素解析 | SudachiPy または Janome | 日本語キーワード・話題ブロック用 |
-| API | FastAPI | Worker / Pipeline 連携 |
-| DB | SQLite（MVP）→ PostgreSQL | 全文検索・集計 |
-| ジョブ | 同期（MVP）→ Redis + Celery | 取得完了後に Pipeline を非同期実行 |
-| フロント | Next.js または SvelteKit | タブ UI・グラフ |
-| グラフ | Chart.js / Recharts | 密度・構成タイムライン |
+| 取得 Worker | Python + chat-downloader | リプレイ取得（非公式 API・要リスク管理） |
+| 分析 | Python | Worker と同一プロセス可（第一弾 POC） |
+| 形態素解析 | **Janome** | 第一弾。精度不足時 SudachiPy へ |
+| API | **FastAPI** | `/api/v1`、OpenAPI 自動生成 |
+| DB | **SQLite**（第一弾）→ PostgreSQL | 10 万コメント級まで SQLite |
+| ジョブ | 同期（第一弾）→ Redis + Celery | Phase B 以降 |
+| フロント | **Next.js**（App Router） | TypeScript |
+| UI | **shadcn/ui + Tailwind CSS** | 詳細は ui-spec.md |
+| グラフ | **Recharts** | 密度・重ねグラフ |
+| 認証 | **なし**（第一弾 POC） | Phase D で OAuth |
+
+方針: **メインストリームで安全な定番技術**を採用。第一弾はインフラ最小、将来は段階的拡張。
+
+---
+
+## 技術選定の根拠
+
+### 全体方針
+
+LiveChatScope の処理は **取得（Python 向き）→ 分析（データ処理）→ 表示（Web UI）** に分かれる。  
+各レイヤに業界標準の定番を置き、第一弾 POC では **1 人開発でも破綻しにくい** 構成とする。
+
+| 観点 | 方針 |
+|------|------|
+| メインストリーム | npm / PyPI で実績が厚い定番 |
+| 安全 | フレームワーク本体は大コミュニティが維持 |
+| 第一弾 | SQLite・認証なし・単一プロセス可 |
+| 将来 | PostgreSQL・ジョブキュー・認証へ段階的拡張 |
+
+### Python + FastAPI（バックエンド）
+
+| 項目 | 内容 |
+|------|------|
+| 選定理由 | chat-downloader・Janome と **同一言語**で取得〜分析〜 API を一体運用 |
+| 特徴 | 型ヒント、Pydantic、**OpenAPI 自動生成**（`/docs`） |
+| メインストリーム度 | 2020 年代以降の Python 新規 API で de facto |
+| 見送り | Django（第一弾には過剰）、Node（Python NLP 資産と二言語化） |
+
+### chat-downloader（取得）
+
+| 項目 | 内容 |
+|------|------|
+| 選定理由 | 終了後リプレイは **公式 API 不可**。OSS として最も実績がある |
+| 特徴 | MIT、`time_in_seconds` 付与、スパチャ対応 |
+| リスク | **非公式 API 依存** — 仕様変更・ToS。バージョン固定・定期確認が必須 |
+
+### Next.js（フロント）
+
+| 項目 | 内容 |
+|------|------|
+| 選定理由 | React 系 **de facto**、App Router が画面構成と一致 |
+| 特徴 | 情報量最多、shadcn/ui との一体性、将来 Vercel デプロイ可 |
+| 見送り | Vue/Svelte（UI 部品エコシステムが React 中心） |
+
+### shadcn/ui + Tailwind + Recharts（UI）
+
+| 項目 | 内容 |
+|------|------|
+| 選定理由 | 2024–2026 年の **SaaS ダッシュボード標準セット** |
+| 特徴 | Radix（a11y）+ Tailwind（CSS 標準）、Recharts（React チャート定番） |
+| 見送り | MUI（重い）、素 Tailwind のみ（工数増） |
+
+### SQLite → PostgreSQL（DB）
+
+| 項目 | 内容 |
+|------|------|
+| 第一弾 | **ファイル 1 つ**で完結。Docker 不要。10 万コメント級まで十分 |
+| 将来 | マルチユーザー・本格 FTS・並列書き込みは PostgreSQL |
+| 移行 | SQL を PostgreSQL 互換で設計し、移行パスを確保 |
+
+### Janome（形態素解析）
+
+| 項目 | 内容 |
+|------|------|
+| 第一弾 | Pure Python、**MeCab 不要** — Windows 開発で詰まりにくい |
+| 将来 | 精度不足時 **SudachiPy** へ差し替え |
+
+### 技術リスク一覧
+
+| 技術 | メインストリーム | 第一弾安全性 | 備考 |
+|------|:----------------:|:------------:|------|
+| FastAPI / Next.js / SQLite | ◎ | ◎ | 定番 |
+| shadcn / Tailwind / Recharts | ◎ | ◎ | 定番 |
+| Janome | ○ | ◎ | 導入容易 |
+| chat-downloader | ○ | △ | **唯一の非公式依存** |
+
+---
+
+## 開発環境（第一弾 POC）
+
+| 項目 | 決定 |
+|------|------|
+| API バージョン | **`/api/v1/...`** で固定 |
+| 認証 | **なし**（ローカル・単一ユーザー POC） |
+| フロント | `http://localhost:3000`（Next.js） |
+| API | `http://localhost:8000`（FastAPI） |
+| CORS | FastAPI で `http://localhost:3000` を許可 |
+| DB | `data/livechatscope.db`（gitignore） |
+
+詳細なエンドポイント・スキーマ: [api-spec.md](api-spec.md)
 
 ---
 
@@ -364,21 +455,25 @@ stream_summary      (video_id, summary_json, generated_at)
 
 ---
 
-## API 設計（分析関連・案）
+## API 設計（概要）
+
+詳細仕様は [api-spec.md](api-spec.md) を参照。ベースパス: **`/api/v1`**。
 
 | Method | Path | 説明 |
 |--------|------|------|
-| POST | `/api/videos` | URL 送信 → 取得ジョブ開始 |
-| GET | `/api/videos/{id}/status` | 取得・分析ステータス |
-| GET | `/api/videos/{id}/summary` | Stage 7 出力（サマリータブ） |
-| GET | `/api/videos/{id}/density` | 密度バケット |
-| GET | `/api/videos/{id}/highlights` | 盛り上がり候補 |
-| GET | `/api/videos/{id}/topics` | 話題ブロック + スコアカード |
-| GET | `/api/videos/{id}/topics/transitions` | 話題遷移 |
-| GET | `/api/videos/{id}/keywords` | キーワード統計 |
-| GET | `/api/videos/{id}/super-chats` | スパチャ一覧 |
-| GET | `/api/videos/{id}/messages` | ページング + 検索 |
-| GET | `/api/videos/{id}/export/{type}` | markdown / csv / json |
+| POST | `/api/v1/videos` | URL 送信 → 取得ジョブ開始 |
+| GET | `/api/v1/videos/{id}/status` | 取得・分析ステータス |
+| GET | `/api/v1/videos/{id}/summary` | サマリー（Stage 7） |
+| GET | `/api/v1/videos/{id}/density` | 密度バケット |
+| GET | `/api/v1/videos/{id}/highlights` | 盛り上がり候補 |
+| GET | `/api/v1/videos/{id}/topics` | 話題ブロック |
+| GET | `/api/v1/videos/{id}/topics/transitions` | 話題遷移 |
+| GET | `/api/v1/videos/{id}/keywords` | キーワード統計 |
+| GET | `/api/v1/videos/{id}/super-chats` | スパチャ一覧 |
+| GET | `/api/v1/videos/{id}/authors` | 投稿者統計 |
+| GET | `/api/v1/videos/{id}/low-activity` | 低活動区間 |
+| GET | `/api/v1/videos/{id}/messages` | ページング + 検索 |
+| GET | `/api/v1/videos/{id}/export/{type}` | markdown / csv / json |
 
 ---
 
