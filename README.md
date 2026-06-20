@@ -42,7 +42,12 @@ YouTube ライブ配信のチャットリプレイを取得・分析し、配信
 ### AI エージェントとのやり取り
 
 **原則 caveman モード（コンテキスト圧縮）** で進める。  
-実装タスクは **メインチャットが Task サブエージェントで実行**（別 Agent の手動起動・コピペ不要）。詳細は [development-process.md](docs/development-process.md)。
+実装タスクは **メインチャットが Task サブエージェントで実行**（別 Agent の手動起動・コピペ不要）。
+
+| レイヤ | 内容 |
+|--------|------|
+| **グローバル** | Cursor ルール `multi-agent-development.mdc` — マネージャー/ワーカー基本ルール（全プロジェクト） |
+| **プロジェクト** | [development-process.md](docs/development-process.md) — ブランチ・タスク ID・LiveChatScope 固有の指示例 |
 
 | 項目 | 方針 |
 |------|------|
