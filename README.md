@@ -75,5 +75,5 @@ npm run dev
 
 ## ステータス
 
-🚧 **実装中** — W1 取得 / W2 Pipeline 基本 / W5 シェル完了（`dev`）
+🚧 **実装中** — W2 Pipeline / W-F1 サマリー UI / W5 シェル完了（`dev`）。W4 API 実行中
 
