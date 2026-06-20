@@ -344,7 +344,7 @@ topic_blocks(
 | キー | 初期値 | 説明 |
 |------|--------|------|
 | `topic_window_sec` | 60 | 語分布の集計窓（Stage 4 と揃える） |
-| `topic_change_threshold` | 要チューニング | 変化点判定 |
+| `topic_change_threshold` | **0.35**（[analysis-params.md](analysis-params.md)） | 変化点判定（cosine 距離） |
 | `topic_min_block_sec` | 180 | 短すぎる区間は隣接とマージ |
 
 **注意**: ラベルは推定値。UI では必ず「推定」「チャット上の話題」と表示。

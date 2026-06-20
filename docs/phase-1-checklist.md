@@ -53,9 +53,10 @@
 
 ### 4. 分析パラメータ — `docs/analysis-params`
 
-- [ ] 全パラメータ一覧と既定値
-- [ ] チューニング方針・配信ジャンル差の注記
-- [ ] Stage ごとの入出力仕様へのリンク
+- [x] 全パラメータ一覧と既定値（`backend/config/analysis_defaults.json`）
+- [x] チューニング方針・配信ジャンル差の注記
+- [x] Stage ごとの入出力仕様へのリンク
+- [x] ストップワード（`backend/config/stopwords_ja_chat.txt`）
 
 ### 5. 開発プロセス — `docs/development-process`
 
@@ -119,7 +120,7 @@
 | 区分 | 完了 | 合計 |
 |------|:----:|:----:|
 | 設計 0（骨格） | 3 | 3 |
-| 設計 1–6 | 4 | 6 |
+| 設計 1–6 | 5 | 6 |
 | 実装 | 0 | — |
 
-**次のアクション**: D-4 `docs/analysis-params` ブランチ → 分析パラメータ
+**次のアクション**: D-6 `docs/test-acceptance` ブランチ → テスト / 受入基準

@@ -1,0 +1,349 @@
+# LiveChatScope — 分析パラメータ
+
+> タスク D-4 | ブランチ: `docs/analysis-params`  
+> 参照: [architecture.md](architecture.md), [db-schema.md](db-schema.md), [api-spec.md](api-spec.md)
+
+## 1. 概要
+
+分析 Pipeline（Stage 0–8）で使用する **既定パラメータ** を定義する。  
+第一弾 POC では **コード + JSON 既定値** で固定し、UI からの変更は Phase B 以降。
+
+| 項目 | 決定 |
+|------|------|
+| 設定ファイル | `backend/config/analysis_defaults.json` |
+| 動画ごとの記録 | `analysis_params.params_json`（実行時スナップショット） |
+| 方針 | 迷ったら **やや盛る**（候補・ブロックを多め）→ 後から閾値を上げて削る |
+| 上書き | 環境変数 `LIVECHATSCOPE_ANALYSIS_CONFIG` で JSON パス指定可（将来） |
+
+---
+
+## 2. パラメータ一覧（全 Stage）
+
+### 2.1 グローバル
+
+| キー | 型 | 既定値 | Stage | 説明 |
+|------|-----|--------|:-----:|------|
+| `density_bucket_sec` | int | **60** | 1,4,3 | 密度・キーワード・スパチャバケット幅（秒） |
+| `min_token_length` | int | **2** | 4 | キーワードとして採用する最小文字数 |
+| `keyword_top_n_overall` | int | **30** | 4,7 | 全体キーワード Top N |
+| `keyword_top_n_timeline` | int | **10** | 4 | バケット内 Top N（話題分析用） |
+| `topic_label_top_k` | int | **3** | 5 | 話題ラベルに使う代表語数 |
+| `clip_padding_sec` | int | **30** | 2 | 切り抜き候補 ±秒 |
+| `delete_tokens_after_stage4` | bool | **true** | 4 | Stage 4 後に `tokens` 削除 |
+
+### 2.2 Stage 0: 正規化
+
+| キー | 型 | 既定値 | 説明 |
+|------|-----|--------|------|
+| `skip_missing_time` | bool | true | `time_in_seconds` 欠損行を分析から除外 |
+| `super_chat_types` | string[] | 下表 | スパチャ系 `message_type` |
+
+**`super_chat_types` 既定値**
+
+```json
+["super_chat", "super_sticker", "super_chat_event", "super_sticker_event"]
+```
+
+（chat-downloader の実際の type 名は取得時に正規化マップで統一）
+
+---
+
+### 2.3 Stage 1: 基本集計
+
+| キー | 型 | 既定値 | 説明 |
+|------|-----|--------|------|
+| `density_bucket_sec` | int | 60 | 1分単位密度 |
+| `author_top_n` | int | **20** | 投稿者 Top N |
+| `topic_author_top_n` | int | **10** | 話題別 Top N（Stage 6b） |
+
+---
+
+### 2.4 Stage 2: 盛り上がり検出
+
+| キー | 型 | 既定値 | 説明 |
+|------|-----|--------|------|
+| `highlight_top_n` | int | **10** | 盛り上がり候補数 |
+| `highlight_moving_avg_buckets` | int | **5** | 移動平均窓（バケット数） |
+| `highlight_merge_window_sec` | int | **120** | 近接スパイクのマージ幅 |
+| `highlight_min_score` | float | **1.5** | score 下限（count/moving_avg） |
+| `highlight_moving_avg_floor` | float | **1.0** | 移動平均が此値未満のときは floor を使用 |
+
+**スコア**: `score = count / max(moving_avg, highlight_moving_avg_floor)`
+
+---
+
+### 2.5 Stage 3: スパチャ
+
+| キー | 型 | 既定値 | 説明 |
+|------|-----|--------|------|
+| `density_bucket_sec` | int | 60 | `super_chat_buckets` 集計幅 |
+| `primary_currency_display` | string | **JPY** | 多通貨時の topic_blocks 合算表示優先 |
+
+---
+
+### 2.6 Stage 4: キーワード（Janome）
+
+| キー | 型 | 既定値 | 説明 |
+|------|-----|--------|------|
+| `tokenizer` | string | **janome** | `janome` / `sudachi`（将来） |
+| `include_pos` | string[] | 下表 | 採用品詞 |
+| `exclude_pos` | string[] | 下表 | 除外品詞 |
+| `stopwords` | string[] | §4 | ストップワード |
+| `stopword_regex` | string[] | §4 | 正規表現除外 |
+| `min_token_length` | int | 2 | 最小トークン長 |
+| `keyword_min_doc_count` | int | **5** | 全体頻度に載せる最小出現回数 |
+| `density_bucket_sec` | int | 60 | `keyword_timeline` バケット |
+
+**`include_pos` 既定（Janome）**
+
+```json
+["名詞", "動詞", "形容詞", "副詞"]
+```
+
+**`exclude_pos` 既定**
+
+```json
+["助詞", "助動詞", "記号", "接続詞", "感動詞"]
+```
+
+※ 名詞のうち `非自立`, `代名詞`, `数` は実装時に追加除外可。
+
+---
+
+### 2.7 Stage 5: 話題ブロック
+
+| キー | 型 | 既定値 | 説明 |
+|------|-----|--------|------|
+| `topic_window_sec` | int | **60** | 語分布窓（= density_bucket_sec と同期） |
+| `topic_distance_metric` | string | **cosine** | `cosine` / `jsd` |
+| `topic_change_threshold` | float | **0.35** | 隣接窓間距離が此値超で変化点（cosine 距離） |
+| `topic_min_block_sec` | int | **180** | 短区間マージ閾値（3分） |
+| `topic_max_blocks` | int | **20** | 上限（超えたら閾値を自動引き上げ） |
+| `topic_label_top_k` | int | 3 | ラベル用 Top 語 |
+| `topic_label_separator` | string | **" / "** | ラベル連結 |
+
+**閾値 0.35 について**: 第一弾 POC の仮値。ブロックが多すぎる → 0.40〜0.50 へ、少なすぎる → 0.25〜0.30 へ調整。
+
+**自動上限**: ブロック数 > `topic_max_blocks` のとき、`topic_change_threshold` を 0.05 ずつ増やして再分割（最大 +0.30）。
+
+---
+
+### 2.8 Stage 6a: 話題遷移
+
+| キー | 型 | 既定値 | 説明 |
+|------|-----|--------|------|
+| — | — | — | Stage 5 出力に依存。追加パラメータなし |
+
+---
+
+### 2.9 Stage 6b: 話題別アクティブユーザ
+
+| キー | 型 | 既定値 | 説明 |
+|------|-----|--------|------|
+| `topic_author_top_n` | int | 10 | ブロック内 Top N |
+| `core_regular_min_block_ratio` | float | **0.5** | 全ブロックの 50% 以上に登場で常連 |
+
+---
+
+### 2.10 Stage 6c: 低活動区間
+
+| キー | 型 | 既定値 | 説明 |
+|------|-----|--------|------|
+| `low_activity_ratio` | float | **0.5** | 平均密度 × 此比率未満 |
+| `low_activity_min_sec` | int | **300** | 連続 5 分以上 |
+| `low_activity_merge_gap_sec` | int | **60** | 近接区間のマージ幅 |
+
+---
+
+### 2.11 Stage 7: サマリー
+
+| キー | 型 | 既定値 | 説明 |
+|------|-----|--------|------|
+| `summary_highlights_n` | int | **5** | サマリーに載せる盛り上がり数 |
+| `summary_keywords_n` | int | **10** | サマリーに載せるキーワード数 |
+| `summary_topic_preview_n` | int | **6** | 話題スコアカード preview 数 |
+
+---
+
+## 3. 既定 JSON（`analysis_defaults.json`）
+
+```json
+{
+  "version": 1,
+  "global": {
+    "density_bucket_sec": 60,
+    "min_token_length": 2,
+    "keyword_top_n_overall": 30,
+    "keyword_top_n_timeline": 10,
+    "topic_label_top_k": 3,
+    "clip_padding_sec": 30,
+    "delete_tokens_after_stage4": true
+  },
+  "stage0": {
+    "skip_missing_time": true,
+    "super_chat_types": [
+      "super_chat",
+      "super_sticker",
+      "super_chat_event",
+      "super_sticker_event"
+    ]
+  },
+  "stage1": {
+    "author_top_n": 20,
+    "topic_author_top_n": 10
+  },
+  "stage2": {
+    "highlight_top_n": 10,
+    "highlight_moving_avg_buckets": 5,
+    "highlight_merge_window_sec": 120,
+    "highlight_min_score": 1.5,
+    "highlight_moving_avg_floor": 1.0
+  },
+  "stage3": {
+    "primary_currency_display": "JPY"
+  },
+  "stage4": {
+    "tokenizer": "janome",
+    "include_pos": ["名詞", "動詞", "形容詞", "副詞"],
+    "exclude_pos": ["助詞", "助動詞", "記号", "接続詞", "感動詞"],
+    "keyword_min_doc_count": 5,
+    "stopwords_file": "stopwords_ja_chat.txt"
+  },
+  "stage5": {
+    "topic_distance_metric": "cosine",
+    "topic_change_threshold": 0.35,
+    "topic_min_block_sec": 180,
+    "topic_max_blocks": 20,
+    "topic_label_separator": " / "
+  },
+  "stage6b": {
+    "core_regular_min_block_ratio": 0.5
+  },
+  "stage6c": {
+    "low_activity_ratio": 0.5,
+    "low_activity_min_sec": 300,
+    "low_activity_merge_gap_sec": 60
+  },
+  "stage7": {
+    "summary_highlights_n": 5,
+    "summary_keywords_n": 10,
+    "summary_topic_preview_n": 6
+  }
+}
+```
+
+---
+
+## 4. チャット向けストップワード
+
+ファイル: `backend/config/stopwords_ja_chat.txt`（1 行 1 語）
+
+### 4.1 固定リスト（抜粋）
+
+```
+www
+wwww
+草
+w
+888
+おつ
+otsu
+ktkr
+nb
+ﾜｰｲ
+8888
+初見
+こんばんは
+こんにちは
+おはよう
+おやすみ
+gg
+GG
+```
+
+### 4.2 正規表現除外（`stopword_regex`）
+
+| パターン | 説明 |
+|----------|------|
+| `^[wW]+$` | w 連打 |
+| `^[ｗＷ]+$` | 全角 w |
+| `^[0-9]+$` | 数字のみ |
+| `^[\p{Emoji}]+$` | 絵文字のみ（Unicode プロパティ） |
+| `^.{1}$` | 1 文字 |
+
+### 4.3 Janome 追加除外
+
+- 名詞: `非自立`, `代名詞`, `数`（設定で切替可）
+- ユーザー名っぽい `@` 始まりはトークン化前に除去
+
+---
+
+## 5. Stage 入出力 ↔ パラメータ
+
+| Stage | 主パラメータ | 入力 | 出力 |
+|:-----:|--------------|------|------|
+| 0 | `skip_missing_time`, `super_chat_types` | raw chat | `messages` |
+| 1 | `density_bucket_sec`, `author_top_n` | messages | density, author, type stats |
+| 2 | `highlight_*`, `clip_padding_sec` | density_buckets | highlights |
+| 3 | `density_bucket_sec` | messages | super_chat_* |
+| 4 | `tokenizer`, `stopwords`, `keyword_*` | messages | tokens → keyword_* |
+| 5 | `topic_change_threshold`, `topic_min_block_sec` | keyword_timeline | topic_blocks |
+| 6a | — | topic_blocks | topic_transitions |
+| 6b | `topic_author_top_n`, `core_regular_*` | topic_blocks, messages | topic_author_stats |
+| 6c | `low_activity_*` | density_buckets | low_activity_segments |
+| 7 | `summary_*_n` | 全派生 | stream_summary |
+
+---
+
+## 6. チューニング方針
+
+### 6.1 配信ジャンル別の目安（第一弾は手動調整）
+
+| ジャンル | 調整のヒント |
+|----------|--------------|
+| **ゲーム実況** | 話題変化が激しい → `topic_change_threshold` **0.30–0.35**。キーワードに固有名詞が多い |
+| **雑談・トーク** | 変化が緩やか → 閾値 **0.40–0.50**、`topic_min_block_sec` **300** |
+| **歌・BGM 中心** | チャット密度低 → `low_activity_ratio` **0.3**、`highlight_min_score` **1.2** |
+| **同時視聴多・大規模** | `keyword_min_doc_count` **10–20** でノイズ削減 |
+
+### 6.2 調整の優先順
+
+1. **話題ブロック数**が合わない → `topic_change_threshold`
+2. **盛り上がりが多すぎ** → `highlight_min_score` ↑, `highlight_top_n` ↓
+3. **キーワードがノイズだらけ** → stopwords 追加, `keyword_min_doc_count` ↑
+4. **低活動が多すぎ** → `low_activity_ratio` ↓ または `low_activity_min_sec` ↑
+
+### 6.3 POC での検証
+
+- 短い配信（30分）・中規模（2h）・長時間（4h+）で各 1 本ずつ手動確認
+- `analysis_params` に使用 JSON を保存し、結果とセットで比較
+
+---
+
+## 7. API / DB 連携
+
+- Pipeline 開始時: `analysis_defaults.json` を読み込み
+- 完了時: 実際に使用した値を `analysis_params.params_json` に INSERT
+- 将来: `GET /api/v1/videos/{id}/analysis-params` でデバッグ公開可
+
+---
+
+## 8. Phase A vs A+ の実行範囲
+
+| Stage | Phase A | Phase A+ |
+|:-----:|:-------:|:--------:|
+| 0–1, 3 | ✓ | ✓ |
+| 2, 4–7 | — | ✓ |
+
+Phase A 完了時: `analysis_status = partial`  
+Phase A+ 完了時: `analysis_status = complete`
+
+---
+
+## 9. 完了条件（D-4）
+
+- [x] 全パラメータ一覧と既定値
+- [x] `analysis_defaults.json` 雛形
+- [x] ストップワード方針
+- [x] チューニング・ジャンル別目安
+- [x] Stage 入出力対応

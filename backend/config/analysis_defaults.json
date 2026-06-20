@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "global": {
+    "density_bucket_sec": 60,
+    "min_token_length": 2,
+    "keyword_top_n_overall": 30,
+    "keyword_top_n_timeline": 10,
+    "topic_label_top_k": 3,
+    "clip_padding_sec": 30,
+    "delete_tokens_after_stage4": true
+  },
+  "stage0": {
+    "skip_missing_time": true,
+    "super_chat_types": [
+      "super_chat",
+      "super_sticker",
+      "super_chat_event",
+      "super_sticker_event"
+    ]
+  },
+  "stage1": {
+    "author_top_n": 20,
+    "topic_author_top_n": 10
+  },
+  "stage2": {
+    "highlight_top_n": 10,
+    "highlight_moving_avg_buckets": 5,
+    "highlight_merge_window_sec": 120,
+    "highlight_min_score": 1.5,
+    "highlight_moving_avg_floor": 1.0
+  },
+  "stage3": {
+    "primary_currency_display": "JPY"
+  },
+  "stage4": {
+    "tokenizer": "janome",
+    "include_pos": ["名詞", "動詞", "形容詞", "副詞"],
+    "exclude_pos": ["助詞", "助動詞", "記号", "接続詞", "感動詞"],
+    "keyword_min_doc_count": 5,
+    "stopwords_file": "stopwords_ja_chat.txt"
+  },
+  "stage5": {
+    "topic_distance_metric": "cosine",
+    "topic_change_threshold": 0.35,
+    "topic_min_block_sec": 180,
+    "topic_max_blocks": 20,
+    "topic_label_separator": " / "
+  },
+  "stage6b": {
+    "core_regular_min_block_ratio": 0.5
+  },
+  "stage6c": {
+    "low_activity_ratio": 0.5,
+    "low_activity_min_sec": 300,
+    "low_activity_merge_gap_sec": 60
+  },
+  "stage7": {
+    "summary_highlights_n": 5,
+    "summary_keywords_n": 10,
+    "summary_topic_preview_n": 6
+  }
+}
