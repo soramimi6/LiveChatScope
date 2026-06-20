@@ -84,7 +84,7 @@
 - [x] プロジェクト雛形（FastAPI + chat-downloader）
 - [x] Fetch Worker（messages 保存）
 - [x] Analysis Pipeline Stage 0–1, 3（Phase A）
-- [ ] Analysis Pipeline Stage 2, 4–8（Phase A+）
+- [x] Analysis Pipeline Stage 2, 4–8（Phase A+）
 - [x] REST API（残エンドポイント — analysis / messages / export）
 
 ### Frontend

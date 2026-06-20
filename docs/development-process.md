@@ -36,9 +36,37 @@ master   … リリース相当（第一弾完成時に dev からマージ）
 - 作業ブランチは **必ず `dev` から切る**
 - `master` への直接 push は第一弾完成時のみ
 - マージ前: 疑問・要検討・要確認は **作業開始前にユーザーへ全件確認**
-- 各エージェント完了時: マネージャーがレビュー → `dev` へマージ → 次タスク起票
+- 各サブタスク完了時: マネージャーがレビュー → `dev` へマージ → 次タスク起票
 
-## エージェントへの引き継ぎ形式
+## タスク実行方式（Task サブエージェント）
+
+**2025-06 以降**: ユーザーが別 Agent を起動する方式は廃止。  
+マネージャー（メインチャット）が **Task ツール** でサブエージェントを起動する。
+
+| 項目 | 方針 |
+|------|------|
+| 起動 | マネージャーが Task（`generalPurpose` / `shell`）を起動 |
+| 並列 | 依存なし・ファイル競合なしなら 1 応答で複数 Task 並列可 |
+| ユーザー負担 | 方針確認への回答のみ（コピペ・転送不要） |
+| マージ | サブエージェントは commit のみ。マネージャーが `dev` へマージ |
+| 確認 | 曖昧な仕様はサブエージェント → マネージャー → ユーザー |
+
+## サブタスクへの引き継ぎ形式
+
+Task の prompt に次を含める。
+
+```markdown
+## タスク: <タイトル>
+- **ブランチ**: `dev` から `<feat/...>`
+- **成果物**: <パス>
+- **完了条件**: [ ] ...
+- **参照**: docs/...
+- **制約**: dev へマージ禁止 / 触らないディレクトリ / 迷ったらマネージャーへ
+```
+
+## エージェントへの引き継ぎ形式（レガシー・参照用）
+
+旧方式（別 Agent チャット）用。新規タスクでは使用しない。
 
 各タスクは次の 3 点セットで渡す。
 
@@ -65,7 +93,7 @@ master   … リリース相当（第一弾完成時に dev からマージ）
 | 2 | D-2 | `docs/api-spec` | [api-spec.md](api-spec.md) | ✅ 完了 |
 | 3 | D-3 | `docs/db-schema` | [db-schema.md](db-schema.md) | ✅ 完了 |
 | 4 | D-4 | `docs/analysis-params` | [analysis-params.md](analysis-params.md) | ✅ 完了 |
-| 5 | D-5 | `docs/development-process` | 本ドキュメント + [phase-1-checklist.md](phase-1-checklist.md) | 🔄 進行中 |
+| 5 | D-5 | `docs/development-process` | 本ドキュメント + [phase-1-checklist.md](phase-1-checklist.md) | ✅ 完了 |
 | 6 | D-6 | `docs/test-acceptance` | [test-acceptance.md](test-acceptance.md) | ✅ 完了 |
 
 詳細チェックリスト: [phase-1-checklist.md](phase-1-checklist.md)
@@ -91,7 +119,7 @@ master   … リリース相当（第一弾完成時に dev からマージ）
 | W11 | `feat/frontend-search` | 詳細検索タブ | W4, W5 |
 | W12 | `feat/export` | エクスポート | W3, W4 |
 
-マネージャーは依存関係を見て **同時起動可能なタスクを束ねて** エージェントに割り当てる。
+マネージャーは依存関係を見て **同時起動可能なタスクを Task で束ねて** サブエージェントに割り当てる。
 
 ## マネージャーの責務
 
