@@ -81,16 +81,16 @@
 
 ### Backend
 
-- [ ] プロジェクト雛形（FastAPI + chat-downloader）
-- [ ] Fetch Worker（messages 保存）
+- [x] プロジェクト雛形（FastAPI + chat-downloader）
+- [x] Fetch Worker（messages 保存）
 - [ ] Analysis Pipeline Stage 0–1, 3（Phase A）
 - [ ] Analysis Pipeline Stage 2, 4–8（Phase A+）
-- [ ] REST API
+- [ ] REST API（残エンドポイント）
 
 ### Frontend
 
-- [ ] Next.js 雛形・ルーティング
-- [ ] URL 入力・進捗表示
+- [x] Next.js 雛形・ルーティング（shadcn/ui）
+- [x] URL 入力・進捗表示
 - [ ] サマリータブ
 - [ ] 話題分析タブ
 - [ ] 盛り上がりタブ
