@@ -7,7 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DisclaimerFooter } from "@/components/disclaimer-footer";
+import { PartialAnalysisBadge } from "@/components/partial-analysis-badge";
 import { SiteHeader } from "@/components/site-header";
+import { SummaryTab } from "@/components/tabs/summary-tab";
 import { getVideo, type VideoMetaResponse } from "@/lib/api";
 
 const TABS = [
@@ -59,7 +61,11 @@ export function VideoDashboard() {
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Badge variant="secondary">メッセージ {meta?.message_count?.toLocaleString() ?? "—"}</Badge>
           <Badge variant="outline">取得: {meta?.fetch_status ?? "—"}</Badge>
-          <Badge variant="outline">分析: {meta?.analysis_status ?? "—"}</Badge>
+          {meta?.analysis_status === "partial" ? (
+            <PartialAnalysisBadge />
+          ) : (
+            <Badge variant="outline">分析: {meta?.analysis_status ?? "—"}</Badge>
+          )}
         </div>
 
         <Tabs
@@ -75,10 +81,7 @@ export function VideoDashboard() {
           </TabsList>
 
           <TabsContent value="summary">
-            <TabPlaceholder
-              title="配信サマリー"
-              description="KPI・構成タイムライン・Top 盛り上がり（FR-3s1）"
-            />
+            <SummaryTab videoId={videoId} durationSeconds={meta?.duration_seconds} />
           </TabsContent>
           <TabsContent value="topics">
             <TabPlaceholder title="話題分析" description="話題ブロック・キーワード・遷移（FR-3b–e）" />

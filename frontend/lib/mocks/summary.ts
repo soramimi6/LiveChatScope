@@ -1,0 +1,128 @@
+import { youtubeJumpUrl } from "@/lib/format";
+import type { SummaryResponse } from "@/lib/api";
+
+/** api-spec GET /summary の形状に沿ったサンプルデータ（videoId は URL から差し替え） */
+export function getMockSummary(videoId: string): SummaryResponse {
+  const blocks = [
+    {
+      block_id: "mock-block-0",
+      block_index: 0,
+      start_sec: 0,
+      end_sec: 900,
+      label: "オープニング / 雑談",
+      label_note: "チャット上の推定話題",
+      message_count: 1200,
+      unique_authors: 300,
+      jump_url: youtubeJumpUrl(videoId, 0),
+    },
+    {
+      block_id: "mock-block-1",
+      block_index: 1,
+      start_sec: 900,
+      end_sec: 2100,
+      label: "ボス戦 Phase 1",
+      label_note: "チャット上の推定話題",
+      message_count: 3400,
+      unique_authors: 520,
+      jump_url: youtubeJumpUrl(videoId, 900),
+    },
+    {
+      block_id: "mock-block-2",
+      block_index: 2,
+      start_sec: 2100,
+      end_sec: 3600,
+      label: "雑談・質疑",
+      label_note: "チャット上の推定話題",
+      message_count: 1800,
+      unique_authors: 410,
+      jump_url: youtubeJumpUrl(videoId, 2100),
+    },
+    {
+      block_id: "mock-block-3",
+      block_index: 3,
+      start_sec: 3600,
+      end_sec: 5400,
+      label: "ボス戦 Phase 2",
+      label_note: "チャット上の推定話題",
+      message_count: 4200,
+      unique_authors: 680,
+      jump_url: youtubeJumpUrl(videoId, 3600),
+    },
+    {
+      block_id: "mock-block-4",
+      block_index: 4,
+      start_sec: 5400,
+      end_sec: 6300,
+      label: "エンディング / お疲れ様",
+      label_note: "チャット上の推定話題",
+      message_count: 950,
+      unique_authors: 280,
+      jump_url: youtubeJumpUrl(videoId, 5400),
+    },
+  ];
+
+  return {
+    video_id: videoId,
+    message_count: 12345,
+    unique_authors: 890,
+    peak: {
+      time_in_seconds: 3600,
+      time_text: "1:00:00",
+      density: 120,
+      jump_url: youtubeJumpUrl(videoId, 3600),
+    },
+    super_chat_total: [{ currency: "JPY", amount: 50000, count: 12 }],
+    topic_block_count: blocks.length,
+    top_highlights: [
+      {
+        rank: 1,
+        time_in_seconds: 1234.5,
+        time_text: "0:20:34",
+        score: 3.2,
+        jump_url: youtubeJumpUrl(videoId, 1234),
+      },
+      {
+        rank: 2,
+        time_in_seconds: 3650,
+        time_text: "1:00:50",
+        score: 2.9,
+        jump_url: youtubeJumpUrl(videoId, 3650),
+      },
+      {
+        rank: 3,
+        time_in_seconds: 890,
+        time_text: "0:14:50",
+        score: 2.5,
+        jump_url: youtubeJumpUrl(videoId, 890),
+      },
+      {
+        rank: 4,
+        time_in_seconds: 4520,
+        time_text: "1:15:20",
+        score: 2.3,
+        jump_url: youtubeJumpUrl(videoId, 4520),
+      },
+      {
+        rank: 5,
+        time_in_seconds: 2100,
+        time_text: "0:35:00",
+        score: 2.1,
+        jump_url: youtubeJumpUrl(videoId, 2100),
+      },
+    ],
+    top_keywords: [
+      { token: "ボス", count: 450, rank: 1 },
+      { token: "草", count: 380, rank: 2 },
+      { token: "8888", count: 320, rank: 3 },
+      { token: "お疲れ様", count: 290, rank: 4 },
+      { token: "神", count: 265, rank: 5 },
+      { token: "わろた", count: 240, rank: 6 },
+      { token: "GG", count: 210, rank: 7 },
+      { token: "来た", count: 195, rank: 8 },
+      { token: "初見", count: 180, rank: 9 },
+      { token: "かわいい", count: 165, rank: 10 },
+    ],
+    topic_blocks_preview: blocks,
+    generated_at: new Date().toISOString(),
+  };
+}

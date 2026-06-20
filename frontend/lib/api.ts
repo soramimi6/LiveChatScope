@@ -81,3 +81,71 @@ export function getVideoStatus(videoId: string) {
 export function getVideo(videoId: string) {
   return request<VideoMetaResponse>(`/api/v1/videos/${videoId}`);
 }
+
+export type SummaryPeak = {
+  time_in_seconds: number;
+  time_text: string;
+  density: number;
+  jump_url: string;
+};
+
+export type SuperChatTotal = {
+  currency: string;
+  amount: number;
+  count: number;
+};
+
+export type SummaryHighlight = {
+  rank: number;
+  time_in_seconds: number;
+  time_text: string;
+  score: number;
+  jump_url: string;
+};
+
+export type SummaryKeyword = {
+  token: string;
+  count: number;
+  rank: number;
+};
+
+export type TopicBlockPreview = {
+  block_id: string;
+  block_index: number;
+  start_sec: number;
+  end_sec: number;
+  label: string;
+  label_note: string;
+  message_count: number;
+  unique_authors: number;
+  jump_url: string;
+};
+
+export type SummaryResponse = {
+  video_id: string;
+  message_count: number;
+  unique_authors: number;
+  peak: SummaryPeak;
+  super_chat_total: SuperChatTotal[];
+  topic_block_count: number;
+  top_highlights: SummaryHighlight[];
+  top_keywords: SummaryKeyword[];
+  topic_blocks_preview: TopicBlockPreview[];
+  generated_at: string;
+};
+
+export function getSummary(videoId: string) {
+  return request<SummaryResponse>(`/api/v1/videos/${videoId}/summary`);
+}
+
+export async function getSummaryWithFallback(
+  videoId: string,
+): Promise<{ data: SummaryResponse; isMock: boolean }> {
+  try {
+    const data = await getSummary(videoId);
+    return { data, isMock: false };
+  } catch {
+    const { getMockSummary } = await import("@/lib/mocks/summary");
+    return { data: getMockSummary(videoId), isMock: true };
+  }
+}
