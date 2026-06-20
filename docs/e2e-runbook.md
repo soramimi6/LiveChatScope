@@ -41,3 +41,12 @@
 ```
 
 フルフローは `LIVECHATSCOPE_E2E_URL` 環境変数経由で POST → ポーリング → 分析 API → エクスポートを自動検証する（タイムアウト 30 分）。
+
+### 直近の実行結果（2026-06-21）
+
+| テスト | URL | 結果 |
+|--------|-----|------|
+| スモーク | — | ✅ PASS |
+| フルフロー | `LMXjIpjlCac` | ❌ FAIL（`FETCH_FAILED`: Unable to parse initial video data） |
+
+詳細: [handoff-current-state.md §6](handoff-current-state.md)

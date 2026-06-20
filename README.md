@@ -31,6 +31,8 @@ YouTube ライブ配信のチャットリプレイを取得・分析し、配信
 | [docs/analysis-params.md](docs/analysis-params.md) | 分析パラメータ既定値 |
 | [docs/test-acceptance.md](docs/test-acceptance.md) | テスト / 受入基準 |
 | [docs/phase-1-checklist.md](docs/phase-1-checklist.md) | 第一弾チェックリスト |
+| [docs/handoff-current-state.md](docs/handoff-current-state.md) | **作業引き継ぎ・現在地**（別 PC 移行用） |
+| [docs/e2e-runbook.md](docs/e2e-runbook.md) | E2E 手動テスト手順 |
 
 ## 開発
 
@@ -61,12 +63,15 @@ YouTube ライブ配信のチャットリプレイを取得・分析し、配信
 
 ### クイックスタート（POC）
 
+> 詳細・別 PC セットアップ: [handoff-current-state.md](docs/handoff-current-state.md) §7
+
 ```powershell
-# Backend（Python 3.11+ 要インストール）
+# Backend（Python 3.11+ — Windows Store スタブ不可）
 cd backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+pip install -r requirements-dev.txt
 uvicorn app.main:app --reload --port 8000
 
 # Frontend（別ターミナル）
@@ -81,5 +86,6 @@ npm run dev
 
 ## ステータス
 
-🚧 **実装中** — Backend / Frontend 全タブ完了（`dev`）。次: E2E 統合・第一弾完成判定
+🚧 **実装ほぼ完了** — Backend / Frontend 全タブ済（`dev` @ `35d5472`）。**次: E2E 完走 → 性能 → master**  
+→ 別 PC 移行: [docs/handoff-current-state.md](docs/handoff-current-state.md)
 

@@ -140,7 +140,8 @@ Frontend タブは互いにファイルが分離されていれば **1 応答で
 | 5 | D-5 | `docs/development-process` | 本ドキュメント + [phase-1-checklist.md](phase-1-checklist.md) | ✅ 完了 |
 | 6 | D-6 | `docs/test-acceptance` | [test-acceptance.md](test-acceptance.md) | ✅ 完了 |
 
-詳細チェックリスト: [phase-1-checklist.md](phase-1-checklist.md)
+詳細チェックリスト: [phase-1-checklist.md](phase-1-checklist.md)  
+**別 PC 移行・現在地**: [handoff-current-state.md](handoff-current-state.md)
 
 ## 第一弾：実装（パラレル）
 

@@ -64,7 +64,7 @@
 - [x] 設計シリアル / 実装パラレル
 - [x] エージェント引き継ぎ形式
 - [x] ワーカー責務・報告ルール（グローバルルール `multi-agent-development.mdc` + 本 doc のプロジェクト固有追記）
-- [ ] 実装タスク分解の確定（設計完了後に更新）
+- [x] 実装タスク分解の確定（[handoff-current-state.md](handoff-current-state.md) §3 参照）
 
 ### 6. テスト / 受入基準 — `docs/test-acceptance`
 
@@ -103,6 +103,9 @@
 ### 統合
 
 - [ ] E2E: URL 入力 → 分析 → 各タブ表示 → ジャンプ URL 動作
+  - スモーク API テスト: ✅ PASS（`test_e2e_smoke.py`）
+  - フルフロー: ❌ FAIL — `LMXjIpjlCac` で chat-downloader 取得失敗（[handoff-current-state.md §6](handoff-current-state.md)）
+  - 手動 E2E-01: 未実施（取得可能 URL 要）
 - [ ] 10 万コメント級の動作確認
 - [ ] `dev` → `master` マージ（第一弾完成）
 
@@ -119,10 +122,12 @@
 
 ## 進捗サマリー
 
-| 区分 | 完了 | 合計 |
-|------|:----:|:----:|
-| 設計 0（骨格） | 3 | 3 |
-| 設計 1–6 | 6 | 6 |
-| 実装 | 0 | — |
+| 区分 | 完了 | 合計 | 備考 |
+|------|:----:|:----:|------|
+| 設計 0（骨格） | 3 | 3 | |
+| 設計 1–6 | 6 | 6 | |
+| Backend 実装 | 5 | 5 | W1–W4 + W3 |
+| Frontend 実装 | 9 | 9 | W5 + 全タブ + Export |
+| 統合・リリース | 0 | 3 | E2E / 性能 / master |
 
-**設計フェーズ完了。** 次: **実装フェーズ**（[development-process.md](development-process.md) §実装）
+**次**: E2E 完走 → 性能 → 第一弾完成。詳細は [handoff-current-state.md](handoff-current-state.md)
