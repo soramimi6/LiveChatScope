@@ -1,6 +1,7 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
 
+from app.api.common import get_video_row
 from app.db import get_connection
 from app.services.analysis.pipeline import run_analysis_pipeline, stage_label
 from app.services.fetch_worker import fetch_chat_replay
@@ -38,14 +39,6 @@ class VideoMetaResponse(BaseModel):
     analysis_status: str
     fetched_at: str | None
     analyzed_at: str | None
-
-
-def _get_video_row(video_id: str):
-    with get_connection() as conn:
-        row = conn.execute("SELECT * FROM videos WHERE video_id = ?", (video_id,)).fetchone()
-    if row is None:
-        raise HTTPException(status_code=404, detail={"error": {"code": "NOT_FOUND", "message": "動画が見つかりません"}})
-    return row
 
 
 def _run_fetch_pipeline(video_id: str, source_url: str) -> None:
@@ -106,7 +99,7 @@ def create_video(payload: CreateVideoRequest, background_tasks: BackgroundTasks)
 
 @router.get("/{video_id}", response_model=VideoMetaResponse)
 def get_video(video_id: str):
-    row = _get_video_row(video_id)
+    row = get_video_row(video_id)
     return VideoMetaResponse(
         video_id=row["video_id"],
         title=row["title"],
@@ -122,7 +115,7 @@ def get_video(video_id: str):
 
 @router.get("/{video_id}/status", response_model=VideoStatusResponse)
 def get_video_status(video_id: str):
-    row = _get_video_row(video_id)
+    row = get_video_row(video_id)
     error = None
     if row["fetch_status"] == "failed":
         error = {
