@@ -10,6 +10,7 @@ import { DisclaimerFooter } from "@/components/disclaimer-footer";
 import { PartialAnalysisBadge } from "@/components/partial-analysis-badge";
 import { SiteHeader } from "@/components/site-header";
 import { SummaryTab } from "@/components/tabs/summary-tab";
+import { TopicsTab } from "@/components/tabs/topics-tab";
 import { getVideo, type VideoMetaResponse } from "@/lib/api";
 
 const TABS = [
@@ -84,7 +85,7 @@ export function VideoDashboard() {
             <SummaryTab videoId={videoId} durationSeconds={meta?.duration_seconds} />
           </TabsContent>
           <TabsContent value="topics">
-            <TabPlaceholder title="話題分析" description="話題ブロック・キーワード・遷移（FR-3b–e）" />
+            <TopicsTab videoId={videoId} durationSeconds={meta?.duration_seconds} />
           </TabsContent>
           <TabsContent value="highlights">
             <TabPlaceholder title="盛り上がり" description="密度グラフ・候補・低活動区間（FR-3a, FR-3p2–p3）" />

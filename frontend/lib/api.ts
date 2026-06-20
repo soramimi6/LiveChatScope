@@ -149,3 +149,74 @@ export async function getSummaryWithFallback(
     return { data: getMockSummary(videoId), isMock: true };
   }
 }
+
+export type TopicBlock = TopicBlockPreview & {
+  super_chat_total: SuperChatTotal[];
+};
+
+export type TopicsResponse = {
+  video_id: string;
+  items: TopicBlock[];
+};
+
+export type TopicTransition = {
+  from_block_index: number;
+  from_label: string;
+  to_block_index: number;
+  to_label: string;
+  at_sec: number;
+};
+
+export type TopicTransitionsResponse = {
+  video_id: string;
+  items: TopicTransition[];
+};
+
+export type KeywordTimelineBucket = {
+  bucket_start_sec: number;
+  tokens: { token: string; count: number }[];
+};
+
+export type KeywordsResponse = {
+  video_id: string;
+  overall: SummaryKeyword[];
+  timeline?: KeywordTimelineBucket[];
+};
+
+export function getTopics(videoId: string) {
+  return request<TopicsResponse>(`/api/v1/videos/${videoId}/topics`);
+}
+
+export function getTopicTransitions(videoId: string) {
+  return request<TopicTransitionsResponse>(
+    `/api/v1/videos/${videoId}/topics/transitions`,
+  );
+}
+
+export function getKeywords(videoId: string, limit = 20) {
+  return request<KeywordsResponse>(
+    `/api/v1/videos/${videoId}/keywords?limit=${limit}`,
+  );
+}
+
+export type TopicsTabData = {
+  topics: TopicsResponse;
+  transitions: TopicTransitionsResponse;
+  keywords: KeywordsResponse;
+};
+
+export async function getTopicsTabDataWithFallback(
+  videoId: string,
+): Promise<{ data: TopicsTabData; isMock: boolean }> {
+  try {
+    const [topics, transitions, keywords] = await Promise.all([
+      getTopics(videoId),
+      getTopicTransitions(videoId),
+      getKeywords(videoId, 20),
+    ]);
+    return { data: { topics, transitions, keywords }, isMock: false };
+  } catch {
+    const { getMockTopicsTabData } = await import("@/lib/mocks/topics");
+    return { data: getMockTopicsTabData(videoId), isMock: true };
+  }
+}
