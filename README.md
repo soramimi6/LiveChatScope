@@ -39,6 +39,25 @@ YouTube ライブ配信のチャットリプレイを取得・分析し、配信
 | `master` | 第一弾完成版 |
 | `dev` | 日常の統合ブランチ |
 
+### クイックスタート（POC）
+
+```powershell
+# Backend (Python 3.11+)
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+
+# Frontend（別ターミナル）
+cd frontend
+npm install
+npm run dev
+```
+
+- Frontend: http://localhost:3000
+- API: http://localhost:8000/docs
+
 ## ステータス
 
-✅ **設計フェーズ完了** — 実装フェーズ（Phase A + A+ プロトタイプ）へ
+✅ **設計フェーズ完了** — 実装中（Backend W1 / Frontend W5）
