@@ -39,6 +39,40 @@ YouTube ライブ配信のチャットリプレイを取得・分析し、配信
 | `master` | 第一弾完成版 |
 | `dev` | 日常の統合ブランチ |
 
+### AI エージェントとのやり取り
+
+**原則 caveman モード（コンテキスト圧縮）** で進める。
+
+| 項目 | 方針 |
+|------|------|
+| 文体 | 短文・箇条書き・結論先出し |
+| 説明 | 必要最小限。冗長な前置き・総括・丁寧語の繰り返しは避ける |
+| 報告 | 変更点・結果・次アクションのみ |
+| 質問 | 選択肢付きで簡潔に |
+| 例外 | 設計判断・トレードオフ・ユーザー確認が必要な論点は、要点を残して詳述可 |
+
+実装・レビュー・タスク引き継ぎすべて、この方針を徹底する。
+
+### クイックスタート（POC）
+
+```powershell
+# Backend（Python 3.11+ 要インストール）
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+
+# Frontend（別ターミナル）
+cd frontend
+copy .env.example .env.local
+npm install
+npm run dev
+```
+
+- Frontend: http://localhost:3000
+- API: http://localhost:8000/docs
+
 ## ステータス
 
-✅ **設計フェーズ完了** — 実装フェーズ（Phase A + A+ プロトタイプ）へ
+🚧 **実装中** — Backend W1 / Frontend W5 雛形完了
