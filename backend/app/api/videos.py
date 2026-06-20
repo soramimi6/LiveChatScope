@@ -2,6 +2,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
 
 from app.db import get_connection
+from app.services.analysis.pipeline import run_analysis_pipeline, stage_label
 from app.services.fetch_worker import fetch_chat_replay
 from app.services.url_parser import InvalidYouTubeURLError, extract_video_id
 
@@ -49,7 +50,7 @@ def _get_video_row(video_id: str):
 
 def _run_fetch_pipeline(video_id: str, source_url: str) -> None:
     fetch_chat_replay(video_id, source_url)
-    # Analysis pipeline (Stage 1+) is implemented in a follow-up task.
+    run_analysis_pipeline(video_id)
 
 
 @router.post("", status_code=202, response_model=CreateVideoResponse)
@@ -138,7 +139,7 @@ def get_video_status(video_id: str):
         "messages_fetched": row["messages_fetched"],
         "messages_total_estimate": None,
         "analysis_stage": row["analysis_stage"],
-        "analysis_stage_label": None,
+        "analysis_stage_label": stage_label(row["analysis_stage"]),
     }
 
     return VideoStatusResponse(

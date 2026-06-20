@@ -63,6 +63,23 @@ CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
     tokenize='unicode61'
 );
 
+CREATE TRIGGER IF NOT EXISTS messages_fts_insert AFTER INSERT ON messages BEGIN
+    INSERT INTO messages_fts(rowid, text, author_name)
+    VALUES (new.id, new.text, new.author_name);
+END;
+
+CREATE TRIGGER IF NOT EXISTS messages_fts_delete AFTER DELETE ON messages BEGIN
+    INSERT INTO messages_fts(messages_fts, rowid, text, author_name)
+    VALUES ('delete', old.id, old.text, old.author_name);
+END;
+
+CREATE TRIGGER IF NOT EXISTS messages_fts_update AFTER UPDATE ON messages BEGIN
+    INSERT INTO messages_fts(messages_fts, rowid, text, author_name)
+    VALUES ('delete', old.id, old.text, old.author_name);
+    INSERT INTO messages_fts(rowid, text, author_name)
+    VALUES (new.id, new.text, new.author_name);
+END;
+
 -- =============================================================================
 -- Stage 1: Basic aggregation
 -- =============================================================================
