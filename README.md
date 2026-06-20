@@ -81,5 +81,5 @@ npm run dev
 
 ## ステータス
 
-🚧 **実装中** — Backend Pipeline 完（W2+W3）/ W4 API / W-F1 サマリー UI（`dev`）。次: 残 Frontend タブ
+🚧 **実装中** — Backend / Frontend 全タブ完了（`dev`）。次: E2E 統合・第一弾完成判定
 
