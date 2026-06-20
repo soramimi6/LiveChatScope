@@ -377,21 +377,23 @@ export function RevenueTab({ videoId }: RevenueTabProps) {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setPage(1);
 
-    getRevenueTabDataWithFallback(videoId)
-      .then(({ data: tabData, isMock: mock }) => {
+    void (async () => {
+      setLoading(true);
+      setPage(1);
+      try {
+        const { data: tabData, isMock: mock } =
+          await getRevenueTabDataWithFallback(videoId);
         if (!cancelled) {
           setData(tabData);
           setListItems(tabData.superChats.items);
           setListTotal(tabData.superChats.pagination.total);
           setIsMock(mock);
         }
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;
