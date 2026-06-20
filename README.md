@@ -22,9 +22,18 @@ YouTube ライブ配信のチャットリプレイを取得・分析し、配信
 | ファイル | 内容 |
 |----------|------|
 | [docs/overview.md](docs/overview.md) | プロダクト概要・フェーズ |
-| [docs/requirements.md](docs/requirements.md) | 要件定義（たたき台） |
-| [docs/architecture.md](docs/architecture.md) | 技術アーキテクチャ（たたき台） |
+| [docs/requirements.md](docs/requirements.md) | 要件定義 |
+| [docs/architecture.md](docs/architecture.md) | 技術アーキテクチャ・分析 Pipeline |
+| [docs/development-process.md](docs/development-process.md) | 開発プロセス・ブランチ戦略 |
+| [docs/phase-1-checklist.md](docs/phase-1-checklist.md) | 第一弾チェックリスト |
+
+## 開発
+
+| ブランチ | 用途 |
+|----------|------|
+| `master` | 第一弾完成版 |
+| `dev` | 日常の統合ブランチ |
 
 ## ステータス
 
-🚧 要件定義・設計フェーズ
+🚧 第一弾: 設計ドキュメント作成中（Phase A + A+ プロトタイプ目標）
