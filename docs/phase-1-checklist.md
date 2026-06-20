@@ -46,10 +46,10 @@
 
 ### 3. DB スキーマ詳細 — `docs/db-schema`
 
-- [ ] DDL（SQLite）
-- [ ] テーブル定義・インデックス
-- [ ] ERD（Mermaid 可）
-- [ ] 派生テーブルと Pipeline Stage の対応
+- [x] DDL（SQLite）— `backend/db/schema.sql`
+- [x] テーブル定義・インデックス・FTS5
+- [x] ERD（Mermaid）
+- [x] 派生テーブルと Pipeline Stage の対応
 
 ### 4. 分析パラメータ — `docs/analysis-params`
 
@@ -119,7 +119,7 @@
 | 区分 | 完了 | 合計 |
 |------|:----:|:----:|
 | 設計 0（骨格） | 3 | 3 |
-| 設計 1–6 | 3 | 6 |
+| 設計 1–6 | 4 | 6 |
 | 実装 | 0 | — |
 
-**次のアクション**: D-3 `docs/db-schema` ブランチ → DB スキーマ詳細
+**次のアクション**: D-4 `docs/analysis-params` ブランチ → 分析パラメータ

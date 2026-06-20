@@ -63,7 +63,7 @@ master   … リリース相当（第一弾完成時に dev からマージ）
 | 0 | — | — | overview / requirements / architecture | ✅ 完了 |
 | 1 | D-1 | `docs/ui-spec` | [ui-spec.md](ui-spec.md) | ✅ 完了 |
 | 2 | D-2 | `docs/api-spec` | [api-spec.md](api-spec.md) | ✅ 完了 |
-| 3 | D-3 | `docs/db-schema` | [db-schema.md](db-schema.md) | ⬜ 未着手 |
+| 3 | D-3 | `docs/db-schema` | [db-schema.md](db-schema.md) | ✅ 完了 |
 | 4 | D-4 | `docs/analysis-params` | [analysis-params.md](analysis-params.md) | ⬜ 未着手 |
 | 5 | D-5 | `docs/development-process` | 本ドキュメント + [phase-1-checklist.md](phase-1-checklist.md) | 🔄 進行中 |
 | 6 | D-6 | `docs/test-acceptance` | [test-acceptance.md](test-acceptance.md) | ⬜ 未着手 |

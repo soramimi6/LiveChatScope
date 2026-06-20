@@ -426,7 +426,12 @@ Stage 7 完了後、UI の「サマリー」タブは **この JSON のみ** を
 
 ---
 
-## データモデル（分析派生）
+## データモデル
+
+詳細 DDL・ERD・インデックス: **[db-schema.md](db-schema.md)**  
+実行用 SQL: `backend/db/schema.sql`
+
+### 概要（分析派生）
 
 ```sql
 -- Phase A
