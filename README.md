@@ -29,6 +29,7 @@ YouTube ライブ配信のチャットリプレイを取得・分析し、配信
 | [docs/api-spec.md](docs/api-spec.md) | API 詳細仕様（`/api/v1`） |
 | [docs/db-schema.md](docs/db-schema.md) | DB スキーマ・DDL |
 | [docs/analysis-params.md](docs/analysis-params.md) | 分析パラメータ既定値 |
+| [docs/test-acceptance.md](docs/test-acceptance.md) | テスト / 受入基準 |
 | [docs/phase-1-checklist.md](docs/phase-1-checklist.md) | 第一弾チェックリスト |
 
 ## 開発
@@ -40,4 +41,4 @@ YouTube ライブ配信のチャットリプレイを取得・分析し、配信
 
 ## ステータス
 
-🚧 第一弾: 設計ドキュメント作成中（Phase A + A+ プロトタイプ目標）
+✅ **設計フェーズ完了** — 実装フェーズ（Phase A + A+ プロトタイプ）へ

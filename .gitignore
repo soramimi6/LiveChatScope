@@ -27,3 +27,6 @@ data/
 
 # Logs
 *.log
+
+# Local test run notes (may contain video URLs)
+docs/test-runs/
