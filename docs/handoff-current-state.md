@@ -14,7 +14,7 @@
 | 作業ディレクトリ（旧 PC） | `c:\Users\soram\OneDrive\Documents\LiveChatScope` |
 | 統合ブランチ | `dev` |
 | リリースブランチ | `master`（第一弾完成時のみ merge） |
-| 最新 `dev` commit | `35d5472` — Add E2E API smoke and flow tests with runbook. |
+| 最新 `dev` commit | `492b2e6` — docs: 別 PC 移行用の現在地スナップショットと E2E 結果を記録 |
 
 ### 別 PC での開始手順
 

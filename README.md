@@ -86,6 +86,6 @@ npm run dev
 
 ## ステータス
 
-🚧 **実装ほぼ完了** — Backend / Frontend 全タブ済（`dev` @ `35d5472`）。**次: E2E 完走 → 性能 → master**  
+🚧 **実装ほぼ完了** — Backend / Frontend 全タブ済（`dev` @ `492b2e6`）。**次: E2E 完走 → 性能 → master**  
 → 別 PC 移行: [docs/handoff-current-state.md](docs/handoff-current-state.md)
 
