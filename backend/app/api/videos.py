@@ -7,7 +7,12 @@ from app.services.analysis.message_filter import parse_display_filter
 from app.services.analysis.params import load_analysis_defaults
 from app.services.analysis.pipeline import run_analysis_pipeline, stage_label
 from app.services.fetch_worker import fetch_chat_replay
-from app.services.job_recovery import is_job_stale
+from app.services.job_recovery import (
+    is_job_stale,
+    recover_stale_video_job,
+    reset_video_for_analysis_retry,
+    reset_video_for_full_retry,
+)
 from app.services.url_parser import InvalidYouTubeURLError, extract_video_id
 
 router = APIRouter(prefix="/videos", tags=["videos"])
@@ -32,6 +37,14 @@ class VideoStatusResponse(BaseModel):
     error: dict | None = None
 
 
+class RetryVideoResponse(BaseModel):
+    video_id: str
+    retry_mode: str
+    fetch_status: str
+    analysis_status: str
+    status_url: str
+
+
 class VideoMetaResponse(BaseModel):
     video_id: str
     title: str | None
@@ -50,6 +63,14 @@ def _run_fetch_pipeline(video_id: str, source_url: str) -> None:
     run_analysis_pipeline(video_id)
 
 
+def _is_actively_processing(row) -> bool:
+    if row is None or is_job_stale(row["updated_at"]):
+        return False
+    if row["fetch_status"] in {"pending", "fetching"}:
+        return True
+    return row["analysis_status"] == "running"
+
+
 @router.post("", status_code=202, response_model=CreateVideoResponse)
 def create_video(payload: CreateVideoRequest, background_tasks: BackgroundTasks):
     try:
@@ -60,16 +81,14 @@ def create_video(payload: CreateVideoRequest, background_tasks: BackgroundTasks)
             detail={"error": {"code": "INVALID_URL", "message": str(exc)}},
         ) from exc
 
+    source_url = payload.url.strip()
+
     with get_connection() as conn:
         existing = conn.execute(
             "SELECT fetch_status, analysis_status, updated_at FROM videos WHERE video_id = ?",
             (video_id,),
         ).fetchone()
-        if (
-            existing
-            and existing["fetch_status"] in {"pending", "fetching"}
-            and not is_job_stale(existing["updated_at"])
-        ):
+        if _is_actively_processing(existing):
             raise HTTPException(
                 status_code=409,
                 detail={"error": {"code": "ALREADY_PROCESSING", "message": "処理中です"}},
@@ -79,23 +98,14 @@ def create_video(payload: CreateVideoRequest, background_tasks: BackgroundTasks)
             """
             INSERT INTO videos (video_id, source_url, fetch_status, analysis_status)
             VALUES (?, ?, 'pending', 'pending')
-            ON CONFLICT(video_id) DO UPDATE SET
-                source_url = excluded.source_url,
-                fetch_status = 'pending',
-                analysis_status = 'pending',
-                fetch_error_code = NULL,
-                fetch_error_message = NULL,
-                analysis_error_code = NULL,
-                analysis_error_message = NULL,
-                messages_fetched = 0,
-                message_count = 0,
-                updated_at = datetime('now')
+            ON CONFLICT(video_id) DO UPDATE SET source_url = excluded.source_url
             """,
-            (video_id, payload.url.strip()),
+            (video_id, source_url),
         )
+        reset_video_for_full_retry(conn, video_id, source_url)
         conn.commit()
 
-    background_tasks.add_task(_run_fetch_pipeline, video_id, payload.url.strip())
+    background_tasks.add_task(_run_fetch_pipeline, video_id, source_url)
 
     return CreateVideoResponse(
         video_id=video_id,
@@ -124,8 +134,58 @@ def get_video(video_id: str):
     )
 
 
+@router.post("/{video_id}/retry", status_code=202, response_model=RetryVideoResponse)
+def retry_video(video_id: str, background_tasks: BackgroundTasks):
+    recover_stale_video_job(video_id)
+    row = get_video_row(video_id)
+
+    if _is_actively_processing(row):
+        raise HTTPException(
+            status_code=409,
+            detail={"error": {"code": "ALREADY_PROCESSING", "message": "処理中です"}},
+        )
+
+    if row["fetch_status"] == "fetched" and row["analysis_status"] == "failed":
+        with get_connection() as conn:
+            reset_video_for_analysis_retry(conn, video_id)
+            conn.commit()
+        background_tasks.add_task(run_analysis_pipeline, video_id)
+        return RetryVideoResponse(
+            video_id=video_id,
+            retry_mode="analysis",
+            fetch_status="fetched",
+            analysis_status="pending",
+            status_url=f"/api/v1/videos/{video_id}/status",
+        )
+
+    if row["fetch_status"] == "failed" or row["analysis_status"] == "failed":
+        source_url = row["source_url"]
+        if not source_url:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": {"code": "MISSING_SOURCE_URL", "message": "再試行に必要な URL がありません"}},
+            )
+        with get_connection() as conn:
+            reset_video_for_full_retry(conn, video_id, source_url)
+            conn.commit()
+        background_tasks.add_task(_run_fetch_pipeline, video_id, source_url)
+        return RetryVideoResponse(
+            video_id=video_id,
+            retry_mode="full",
+            fetch_status="pending",
+            analysis_status="pending",
+            status_url=f"/api/v1/videos/{video_id}/status",
+        )
+
+    raise HTTPException(
+        status_code=400,
+        detail={"error": {"code": "RETRY_NOT_APPLICABLE", "message": "再試行できる状態ではありません"}},
+    )
+
+
 @router.get("/{video_id}/status", response_model=VideoStatusResponse)
 def get_video_status(video_id: str):
+    recover_stale_video_job(video_id)
     row = get_video_row(video_id)
     error = None
     if row["fetch_status"] == "failed":

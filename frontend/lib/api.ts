@@ -91,6 +91,14 @@ export type AnalysisRefilterResponse = {
   analysis_status: string;
 };
 
+export type RetryVideoResponse = {
+  video_id: string;
+  retry_mode: "full" | "analysis";
+  fetch_status: string;
+  analysis_status: string;
+  status_url: string;
+};
+
 export function createVideo(url: string) {
   return request<CreateVideoResponse>("/api/v1/videos", {
     method: "POST",
@@ -100,6 +108,12 @@ export function createVideo(url: string) {
 
 export function getVideoStatus(videoId: string) {
   return request<VideoStatusResponse>(`/api/v1/videos/${videoId}/status`);
+}
+
+export function retryVideo(videoId: string) {
+  return request<RetryVideoResponse>(`/api/v1/videos/${videoId}/retry`, {
+    method: "POST",
+  });
 }
 
 export function getVideo(videoId: string) {

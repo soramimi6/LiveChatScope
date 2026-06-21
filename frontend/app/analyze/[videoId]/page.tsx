@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { DisclaimerFooter } from "@/components/disclaimer-footer";
 import { SiteHeader } from "@/components/site-header";
-import { getVideoStatus, type VideoStatusResponse } from "@/lib/api";
+import { ApiError, getVideoStatus, retryVideo, type VideoStatusResponse } from "@/lib/api";
+import { canRetryJob, formatJobError } from "@/lib/job-errors";
 
 const ANALYSIS_STAGE_COUNT = 8;
 
@@ -42,6 +44,8 @@ function stepLabel(status: VideoStatusResponse | null): string {
     }
     return "3–4/5 分析処理中…";
   }
+  if (status.fetch_status === "failed") return "取得に失敗しました";
+  if (status.analysis_status === "failed") return "分析に失敗しました";
   return "処理中…";
 }
 
@@ -51,35 +55,34 @@ export default function AnalyzePage() {
   const videoId = params.videoId;
   const [status, setStatus] = useState<VideoStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+
+  const pollStatus = useCallback(async () => {
+    const data = await getVideoStatus(videoId);
+    setStatus(data);
+
+    if (data.error) {
+      setError(formatJobError(data.error));
+      return data;
+    }
+
+    setError(null);
+
+    if (data.analysis_status === "complete") {
+      router.replace(`/videos/${videoId}?tab=summary`);
+      return data;
+    }
+
+    return data;
+  }, [videoId, router]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function poll() {
       try {
-        const data = await getVideoStatus(videoId);
         if (cancelled) return;
-        setStatus(data);
-
-        if (data.error) {
-          setError(data.error.message);
-          return;
-        }
-
-        if (data.analysis_status === "complete") {
-          router.replace(`/videos/${videoId}?tab=summary`);
-          return;
-        }
-
-        if (data.fetch_status === "failed") {
-          setError("取得に失敗しました");
-          return;
-        }
-
-        if (data.analysis_status === "failed") {
-          setError("分析に失敗しました");
-          return;
-        }
+        await pollStatus();
       } catch {
         if (!cancelled) {
           setError("ステータスの取得に失敗しました");
@@ -93,7 +96,26 @@ export default function AnalyzePage() {
       cancelled = true;
       clearInterval(id);
     };
-  }, [videoId, router]);
+  }, [pollStatus]);
+
+  async function onRetry() {
+    setRetrying(true);
+    setError(null);
+    try {
+      await retryVideo(videoId);
+      await pollStatus();
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError("再試行の開始に失敗しました");
+      }
+    } finally {
+      setRetrying(false);
+    }
+  }
+
+  const showRetry = status != null && canRetryJob(status);
 
   return (
     <div className="flex min-h-full flex-col">
@@ -127,6 +149,11 @@ export default function AnalyzePage() {
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
+            ) : null}
+            {showRetry ? (
+              <Button className="w-full" onClick={onRetry} disabled={retrying}>
+                {retrying ? "再試行を開始しています…" : "再試行"}
+              </Button>
             ) : null}
           </CardContent>
         </Card>
