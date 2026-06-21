@@ -1,0 +1,27 @@
+{
+  "txt-001": {
+    "message_type": "text_message",
+    "super_chat_amount": null,
+    "super_chat_currency": null
+  },
+  "sc-001": {
+    "message_type": "super_chat",
+    "super_chat_amount": 500.0,
+    "super_chat_currency": "JPY"
+  },
+  "st-001": {
+    "message_type": "super_sticker",
+    "super_chat_amount": 200.0,
+    "super_chat_currency": "JPY"
+  },
+  "mem-001": {
+    "message_type": "membership_item",
+    "super_chat_amount": null,
+    "super_chat_currency": null
+  },
+  "gift-001": {
+    "message_type": "sponsorships_gift_purchase_announcement",
+    "super_chat_amount": null,
+    "super_chat_currency": null
+  }
+}

@@ -1,6 +1,8 @@
 import sqlite3
 
 MESSAGE_TYPE_ALIASES = {
+    "paid_message": "super_chat",
+    "paid_sticker": "super_sticker",
     "super_chat_event": "super_chat",
     "super_sticker_event": "super_sticker",
 }

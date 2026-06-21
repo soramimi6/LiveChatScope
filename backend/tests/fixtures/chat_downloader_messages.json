@@ -1,0 +1,117 @@
+[
+  {
+    "message_id": "txt-001",
+    "message_type": "text_message",
+    "message": "今日の配信テーマはゲーム実況です",
+    "time_in_seconds": 10,
+    "author": { "id": "UC-viewer-1", "name": "viewer1" }
+  },
+  {
+    "message_id": "txt-002",
+    "message_type": "text_message",
+    "message": "ボス戦が楽しみですね",
+    "time_in_seconds": 30,
+    "author": { "id": "UC-viewer-2", "name": "viewer2" }
+  },
+  {
+    "message_id": "txt-003",
+    "message_type": "text_message",
+    "message": "配信テーマについて質問があります",
+    "time_in_seconds": 50,
+    "author": { "id": "UC-viewer-3", "name": "viewer3" }
+  },
+  {
+    "message_id": "txt-004",
+    "message_type": "text_message",
+    "message": "ボス戦の攻略情報を教えてください",
+    "time_in_seconds": 70,
+    "author": { "id": "UC-viewer-4", "name": "viewer4" }
+  },
+  {
+    "message_id": "txt-005",
+    "message_type": "text_message",
+    "message": "ゲーム実況いつも見てます",
+    "time_in_seconds": 90,
+    "author": { "id": "UC-viewer-5", "name": "viewer5" }
+  },
+  {
+    "message_id": "txt-006",
+    "message_type": "text_message",
+    "message": "ボス戦開始しました",
+    "time_in_seconds": 120,
+    "author": { "id": "UC-viewer-6", "name": "viewer6" }
+  },
+  {
+    "message_id": "sc-001",
+    "message_type": "paid_message",
+    "message": "配信いつもありがとうございます",
+    "time_in_seconds": 130,
+    "author": { "id": "UC-sc-1", "name": "supporter1" },
+    "money": { "text": "¥500", "amount": 500.0, "currency": "JPY" }
+  },
+  {
+    "message_id": "txt-007",
+    "message_type": "text_message",
+    "message": "ボス戦の演出すごい",
+    "time_in_seconds": 150,
+    "author": { "id": "UC-viewer-7", "name": "viewer7" }
+  },
+  {
+    "message_id": "txt-008",
+    "message_type": "text_message",
+    "message": "ゲーム実況の解説わかりやすい",
+    "time_in_seconds": 180,
+    "author": { "id": "UC-viewer-8", "name": "viewer8" }
+  },
+  {
+    "message_id": "st-001",
+    "message_type": "paid_sticker",
+    "message": null,
+    "time_in_seconds": 200,
+    "author": { "id": "UC-sc-2", "name": "supporter2" },
+    "money": { "text": "¥200", "amount": 200.0, "currency": "JPY" }
+  },
+  {
+    "message_id": "mem-001",
+    "message_type": "membership_item",
+    "message": null,
+    "header_secondary_text": "Welcome to Members!",
+    "time_in_seconds": 220,
+    "author": { "id": "UC-mem-1", "name": "newmember1" }
+  },
+  {
+    "message_id": "gift-001",
+    "message_type": "sponsorships_gift_purchase_announcement",
+    "message": "5 memberships gifted",
+    "time_in_seconds": 240,
+    "author": { "id": "UC-gift-1", "name": "gifter1" }
+  },
+  {
+    "message_id": "txt-009",
+    "message_type": "text_message",
+    "message": "雑談タイムに入ります",
+    "time_in_seconds": 400,
+    "author": { "id": "UC-viewer-9", "name": "viewer9" }
+  },
+  {
+    "message_id": "txt-010",
+    "message_type": "text_message",
+    "message": "雑談タイム好き",
+    "time_in_seconds": 420,
+    "author": { "id": "UC-viewer-10", "name": "viewer10" }
+  },
+  {
+    "message_id": "txt-011",
+    "message_type": "text_message",
+    "message": "雑談タイムの話題何ですか",
+    "time_in_seconds": 440,
+    "author": { "id": "UC-viewer-11", "name": "viewer11" }
+  },
+  {
+    "message_id": "txt-012",
+    "message_type": "text_message",
+    "message": "配信テーマの続きも見たい",
+    "time_in_seconds": 460,
+    "author": { "id": "UC-viewer-12", "name": "viewer12" }
+  }
+]
