@@ -399,7 +399,7 @@ flowchart TB
 |------|------|
 | **実現可能性** | 高（機能）/ 中（72k 性能） |
 | **工規模** | 中〜大 |
-| **Backend タスク** | ① JSON に messages, highlights, topics, keywords, low_activity 追加 + `export_version: 2` ② G-04 markdown 統一 ③ 収益タブ用 SC 専用 CSV エンドポイント or クライアント側 SC CSV をラベル明示 |
+| **Backend タスク** | ① JSON に messages, highlights, topics, keywords, low_activity 追加 + `export_version: 2` ② ~~G-04 markdown 統一~~ ✅ ③ 収益タブ用 SC 専用 CSV エンドポイント or クライアント側 SC CSV をラベル明示 |
 | **Frontend タスク** | ExportMenu に `JSON — 分析結果一式` / `CSV — チャットログのみ` + ツールチップ |
 | **残未決** | 説明 UI の置き場所（ExportMenu のみ vs 収益タブ vs 初回ツアー）— **ExportMenu + ツールチップを第一候補** |
 | **依存** | UX-24 完了後にフィルター反映版 export |
