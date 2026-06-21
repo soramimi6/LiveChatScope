@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Copy, Download, Info, Wallet } from "lucide-react";
+import { Copy, Download, Info, TriangleAlert, Wallet } from "lucide-react";
 import {
   Bar,
   CartesianGrid,
@@ -27,6 +27,7 @@ import {
   type ExportType,
   type RevenueTabData,
   type SuperChatItem,
+  type SuperChatStatus,
 } from "@/lib/api/revenue";
 import { exportFilename } from "@/lib/export-filename";
 import { getMockSuperChats } from "@/lib/mocks/revenue";
@@ -355,14 +356,50 @@ function ExportActions({
   );
 }
 
-function EmptyState() {
+const SUPER_CHAT_EMPTY_DEFAULTS: Record<
+  Exclude<SuperChatStatus, "present">,
+  { title: string; message: string }
+> = {
+  none_in_chat: {
+    title: "スーパーチャットはありませんでした",
+    message:
+      "この配信では Super Chat / Super Thanks のデータが検出されませんでした。",
+  },
+  amount_parse_failed: {
+    title: "金額情報を取得できませんでした",
+    message:
+      "スーパーチャットの金額情報を解析できませんでした。チャットログにスーパーチャットが含まれている場合は、形式の変更などが原因の可能性があります。",
+  },
+};
+
+function SuperChatEmptyState({
+  status,
+  message,
+}: {
+  status: Exclude<SuperChatStatus, "present">;
+  message?: string | null;
+}) {
+  const defaults = SUPER_CHAT_EMPTY_DEFAULTS[status];
+  const title = defaults.title;
+  const description = message ?? defaults.message;
+
+  if (status === "amount_parse_failed") {
+    return (
+      <Alert className="border-amber-500/40 bg-amber-500/5 text-amber-950 dark:text-amber-100">
+        <TriangleAlert className="text-amber-600 dark:text-amber-400" />
+        <AlertTitle>{title}</AlertTitle>
+        <AlertDescription className="text-amber-900/80 dark:text-amber-100/80">
+          {description}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-6 py-16 text-center">
       <Wallet className="size-10 text-muted-foreground" aria-hidden />
-      <p className="text-lg font-medium">スパチャはありませんでした</p>
-      <p className="max-w-md text-sm text-muted-foreground">
-        この配信では Super Chat / Super Thanks のデータが検出されませんでした。
-      </p>
+      <p className="text-lg font-medium">{title}</p>
+      <p className="max-w-md text-sm text-muted-foreground">{description}</p>
     </div>
   );
 }
@@ -451,9 +488,14 @@ export function RevenueTab({ videoId }: RevenueTabProps) {
     );
   }
 
-  const hasSuperChats = totalSuperChatCount(data) > 0;
+  const superChatStatus = data.summary.super_chat_status ?? "present";
+  const superChatCount = totalSuperChatCount(data);
+  const showEmptyState =
+    superChatStatus !== "present" || superChatCount === 0;
+  const emptyStatus: Exclude<SuperChatStatus, "present"> =
+    superChatStatus !== "present" ? superChatStatus : "none_in_chat";
 
-  if (!hasSuperChats) {
+  if (showEmptyState) {
     return (
       <div className="space-y-6">
         {isMock ? (
@@ -465,7 +507,10 @@ export function RevenueTab({ videoId }: RevenueTabProps) {
             </AlertDescription>
           </Alert>
         ) : null}
-        <EmptyState />
+        <SuperChatEmptyState
+          status={emptyStatus}
+          message={data.summary.super_chat_status_message}
+        />
       </div>
     );
   }
