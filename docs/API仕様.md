@@ -463,6 +463,8 @@
 ```json
 {
   "video_id": "VIDEO_ID",
+  "super_chat_status": "none_in_chat",
+  "super_chat_status_message": "この配信のチャット上では…",
   "by_currency": [
     { "currency": "JPY", "total_amount": 50000, "count": 12 }
   ],
@@ -471,6 +473,8 @@
   ]
 }
 ```
+
+`super_chat_status`: `present` | `none_in_chat` | `amount_parse_failed`（UX-05）
 
 ---
 
