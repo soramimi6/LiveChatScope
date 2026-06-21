@@ -28,6 +28,7 @@ import {
   type RevenueTabData,
   type SuperChatItem,
 } from "@/lib/api/revenue";
+import { exportFilename } from "@/lib/export-filename";
 import { getMockSuperChats } from "@/lib/mocks/revenue";
 import { formatSeconds } from "@/lib/format";
 
@@ -293,7 +294,7 @@ function ExportActions({
         } else {
           downloadTextFile(
             content,
-            type === "csv" ? `thanks-${videoId}.csv` : `thanks-${videoId}.md`,
+            exportFilename(videoId, type),
             type === "csv" ? "text/csv;charset=utf-8" : "text/markdown;charset=utf-8",
           );
           setFeedback(

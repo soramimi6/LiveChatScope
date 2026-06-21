@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 
 from app.api.common import format_time_text, get_video_row, jump_url, require_analysis_ready
+from app.api.export_names import export_download_filename
 from app.db import get_connection
 from app.services.analysis.stage8 import _build_markdown_clips, _build_markdown_thanks
 
@@ -49,7 +50,7 @@ def export_video(
     if export_type == "json":
         body = _build_json_export(video_id, row)
         headers = {}
-        disposition = _content_disposition(f"{video_id}.json", download)
+        disposition = _content_disposition(export_download_filename(video_id, "json"), download)
         if disposition:
             headers["Content-Disposition"] = disposition
         return Response(content=body, media_type="application/json", headers=headers)
@@ -57,7 +58,7 @@ def export_video(
     if export_type == "csv":
         body = _build_csv_export(video_id)
         headers = {}
-        disposition = _content_disposition(f"{video_id}.csv", download)
+        disposition = _content_disposition(export_download_filename(video_id, "csv"), download)
         if disposition:
             headers["Content-Disposition"] = disposition
         return Response(content=body, media_type="text/csv; charset=utf-8", headers=headers)
@@ -80,7 +81,9 @@ def export_video(
             body = _build_markdown_thanks_stub(video_id, row)
 
     headers = {}
-    disposition = _content_disposition(f"{video_id}-{export_type}.md", download)
+    disposition = _content_disposition(
+        export_download_filename(video_id, export_type), download
+    )
     if disposition:
         headers["Content-Disposition"] = disposition
     return Response(content=body, media_type="text/markdown; charset=utf-8", headers=headers)

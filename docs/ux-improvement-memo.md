@@ -275,9 +275,22 @@
 
 ---
 
+## I. エクスポート
+
+### UX-21: ダウンロードファイル名の改善 ✅ 実装済み（2026-06-21）
+
+| 項目 | 内容 |
+|------|------|
+| **旧** | `{video_id}.json` / `{video_id}.csv` / `{video_id}-markdown-*.md` |
+| **新** | `LiveChatScope_Result_{video_id}.json`, `.csv`, `_summary.md`, `_clips.md`, `_thanks.md` |
+| **実装** | `backend/app/api/export_names.py`, `frontend/lib/export-filename.ts`, `export.py`, `export.ts`, `revenue-tab.tsx` |
+
+---
+
 ## 変更履歴
 
 | 日付 | 内容 |
 |------|------|
 | 2026-06-21 | 初版（進捗画面 UX-01〜03） |
 | 2026-06-21 | 結果画面 feedback 一括追加（UX-04〜20）、UC FAQ |
+| 2026-06-21 | **UX-21 完了**: エクスポートファイル名を `LiveChatScope_Result_{video_id}_*` 形式に統一 |

@@ -1,3 +1,5 @@
+import { exportFilename } from "@/lib/export-filename";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 export type ExportType =
@@ -33,11 +35,8 @@ function contentTypeFor(type: ExportType): string {
   return "text/markdown";
 }
 
-export function exportFilename(videoId: string, type: ExportType): string {
-  if (type === "json") return `${videoId}.json`;
-  if (type === "csv") return `${videoId}.csv`;
-  return `${videoId}-${type}.md`;
-}
+/** Re-export for callers that import from this module. */
+export { exportFilename } from "@/lib/export-filename";
 
 /** GET `/api/v1/videos/{id}/export/{type}` — テキスト body を返す */
 export async function fetchExport(
