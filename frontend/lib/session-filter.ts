@@ -1,4 +1,4 @@
-/** Session-scoped display filter overrides (UX-19). */
+/** Session-scoped display filter helpers (UX-19 input normalization). */
 
 export type SessionFilterState = {
   ng_keywords: string[];

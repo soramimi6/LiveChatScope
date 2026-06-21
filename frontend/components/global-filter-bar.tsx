@@ -14,10 +14,8 @@ import {
   type DisplayFilter,
 } from "@/lib/api";
 import {
-  loadSessionFilter,
   normalizeAuthorId,
   normalizeKeyword,
-  saveSessionFilter,
 } from "@/lib/session-filter";
 import { cn } from "@/lib/utils";
 import type { DisplayFilterActions } from "@/components/display-filter-actions-context";
@@ -31,21 +29,6 @@ type GlobalFilterBarProps = {
   onActionsReady?: (actions: DisplayFilterActions) => void;
   className?: string;
 };
-
-function mergeSessionFilter(
-  videoId: string,
-  serverFilter: DisplayFilter,
-): DisplayFilter {
-  const session = loadSessionFilter(videoId);
-  const hasNg = session.ng_keywords.length > 0;
-  return {
-    ...serverFilter,
-    ng_keywords: session.ng_keywords,
-    excluded_author_ids: session.excluded_author_ids,
-    exclude_ng_keywords: hasNg ? serverFilter.exclude_ng_keywords || true : false,
-    exclude_stamp_only: serverFilter.exclude_stamp_only,
-  };
-}
 
 function isFilterActive(filter: DisplayFilter): boolean {
   if (filter.exclude_stamp_only) return true;
@@ -84,9 +67,7 @@ export function GlobalFilterBar({
   className,
 }: GlobalFilterBarProps) {
   const [expanded, setExpanded] = useState(false);
-  const [filter, setFilter] = useState(() =>
-    mergeSessionFilter(videoId, initialFilter),
-  );
+  const [filter, setFilter] = useState(() => initialFilter);
   const [updating, setUpdating] = useState(analysisStatus === "running");
   const [error, setError] = useState<string | null>(null);
   const [ngInput, setNgInput] = useState("");
@@ -97,16 +78,12 @@ export function GlobalFilterBar({
   const onRefilterCompleteRef = useRef(onRefilterComplete);
 
   useEffect(() => {
-    setFilter(mergeSessionFilter(videoId, initialFilter));
+    setFilter(initialFilter);
   }, [initialFilter, videoId]);
 
   useEffect(() => {
     filterRef.current = filter;
-    saveSessionFilter(videoId, {
-      ng_keywords: filter.ng_keywords,
-      excluded_author_ids: filter.excluded_author_ids,
-    });
-  }, [filter, videoId]);
+  }, [filter]);
 
   useEffect(() => {
     onRefilterCompleteRef.current = onRefilterComplete;
@@ -409,8 +386,8 @@ export function GlobalFilterBar({
 
       <div className="space-y-3 border-t pt-4">
         <p className="text-xs text-muted-foreground">
-          手動 NG キーワードと除外ユーザーはこのブラウザタブのセッションのみ保持されます。自動 NG
-          の解除は動画に保存され、再分析時も反映されます。
+          NG キーワード・除外ユーザー・スタンプ除外の設定はサーバーに保存され、新規分析開始時の既定値として使われます。自動
+          NG の解除は動画ごとに保存され、再分析時も反映されます。
         </p>
 
         <div className="grid gap-4 sm:grid-cols-2 sm:items-start">

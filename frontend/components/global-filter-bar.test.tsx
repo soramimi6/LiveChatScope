@@ -24,10 +24,6 @@ const DEFAULT_FILTER: DisplayFilter = {
 };
 
 describe("GlobalFilterBar", () => {
-  beforeEach(() => {
-    sessionStorage.clear();
-  });
-
   afterEach(() => {
     cleanup();
   });
