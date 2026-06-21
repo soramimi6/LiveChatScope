@@ -122,8 +122,8 @@ flowchart TB
 | ID | 実現可能性 | 工規模 | 改修プラン | 依存 |
 |----|:----------:|:------:|------------|------|
 | **UX-05** | 高 | 小 | `messages` を判定し `super_chat_status` を API 返却（なし / 取得疑い / あり）。収益タブ Empty に理由表示 | スーパーチャットあり配信での検証データ |
-| **UX-06** | 中 | 中 | `message_filter.py` 新規。Stage 4–5 で `text_message` + スタンプパターン除外。設定 JSON | UX-24 の前提 |
-| **UX-24** | 中 | 大 | `POST …/analysis/refilter` + `run_refilter_pipeline`（段階 **4,5,6a,6b,7,8**、6c 省略）。フィルター JSON 保存。409 で更新中ゲート。FE: バナー・Switch 無効化 | UX-06, UX-19（NG ワード） |
+| **UX-06** | 中 | 中 | ✅ `message_filter.py` — Stage 4–5 で text_message + スタンプ除外 | UX-24 |
+| **UX-24** | 中 | 大 | ✅ refilter API + GlobalFilterBar + 段階 4–8 再実行 | UX-19 |
 | **UX-14** | 高 | 小〜中 | `stage6c.py`: 平均比に加え **パーセンタイル** 閾値。`min_sec` 180 等。6c は refilter 対象外（Q1） | なし |
 
 ### C. サマリー
@@ -244,8 +244,8 @@ flowchart TB
 - [ ] ロゴ・ヘッダ（UX-26）
 
 ### Phase 3
-- [ ] スタンプ除外ロジック（UX-06）
-- [ ] グローバルフィルター + 広い再実行 + 更新中 UI（UX-24）
+- [x] スタンプ除外ロジック（UX-06）
+- [x] グローバルフィルター + 広い再実行 + 更新中 UI（UX-24）
 - [ ] セッション NG ワード（UX-19 最小）
 
 ### Phase 4
@@ -539,7 +539,7 @@ flowchart TB
 | B-05 | `analyze/…/page.tsx` L33–35 | fetch 完了即遷移 → 409 | G-02, UX-01 |
 | B-06 | ~~`export.py` JSON~~ | ~~messages / highlights / topics 未含有~~ → **UX-23 解消** | — |
 | B-07 | ~~`revenue-tab.tsx`~~ | ~~全 messages CSV API 共用~~ → **スパチャ CSV 分離** | — |
-| B-08 | refilter API | **未実装**（greenfield） | UX-24 |
+| B-08 | ~~refilter API~~ | ~~未実装~~ → **UX-24 解消** | UX-19 |
 | B-09 | Stage 4 | トークン逐次 INSERT — 72k でボトルネック | UX-24 性能 |
 | B-10 | `stream_summary` | Stage 7 書込み済みだが summary API 未参照 | UX-08 |
 
