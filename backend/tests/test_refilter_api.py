@@ -79,6 +79,13 @@ def test_post_refilter_returns_202_and_persists_filter(client, monkeypatch):
         "dismissed_auto_ng_keywords": [],
     }
 
+    conn = sqlite3.connect(db_path)
+    row = conn.execute(
+        "SELECT display_filter_json FROM user_settings WHERE user_id = 'local'"
+    ).fetchone()
+    conn.close()
+    assert json.loads(row[0])["ng_keywords"] == ["spam"]
+
 
 def test_post_refilter_applies_ng_keywords(client, monkeypatch):
     db_path = settings.database_path
