@@ -96,7 +96,7 @@ flowchart TB
 
 | ID | 内容 | 実現可能性 | 工規模 | 改修プラン |
 |----|------|:----------:|:------:|------------|
-| **G-01** | 動画メタ未保存（タイトル・チャンネル・尺） | 高 | 中 | `fetch_worker.py`: chat-downloader の video メタを `videos` に UPDATE。UX-07, 09, 26 に効く |
+| **G-01** | 動画メタ未保存（タイトル・チャンネル・尺） | 高 | 中 | ✅ `video_metadata.py` — chat-downloader メタを `videos` に UPDATE |
 | **G-02** | 進捗画面が取得完了で即結果へ（分析中 409） | 高 | 小 | `analyze/…/page.tsx`: 遷移条件を `analysis_status=complete`（または `partial` 以上）に変更。UX-01 と同時 |
 | **G-03** | `/summary` が stage7 設定より LIMIT 5 固定 | 高 | 小 | `analysis.py`: `analysis_defaults.json` の `summary_*_n` を参照、または `stream_summary` を読む — **UX-08** |
 | **G-04** | markdown-summary API と Stage 8 キャッシュ不一致 | 高 | 小 | `export.py` が `stage8._build_markdown_summary` を再利用 — **UX-23** と共通 |
@@ -228,7 +228,7 @@ flowchart TB
 ## 8. フェーズ別 完了条件
 
 ### Phase 0
-- [ ] 取得後に `title` / `duration_seconds` が DB に入る（G-01）
+- [x] 取得後に `title` / `duration_seconds` が DB に入る（G-01）
 - [ ] 進捗画面は分析完了後に結果へ（G-02）
 - [ ] サマリー API がキーワード 10 件等、設定どおり（UX-08 / G-03）
 - [ ] スーパーチャット 0 件時に理由コードが API / UI に出る（UX-05）

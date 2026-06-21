@@ -73,7 +73,7 @@
 |------|-----------|----------|---------|
 | `analysis_status=partial` | Phase A のみ完了（[アーキテクチャ.md](アーキテクチャ.md)） | Pipeline は常に `complete` で終了（`partial` をセットするコードなし） | `PartialAnalysisBadge` は実質未使用 |
 | 進捗 → 結果遷移 | 分析完了待ち（[E2E手順.md](E2E手順.md)） | `fetch_status=fetched` で即 `/videos/` へ（`analyze/…/page.tsx` L33–35） | 分析 `running` 中に結果画面へ行き API 409 の可能性 |
-| 動画メタ | タイトル・チャンネル・尺 | `fetch_worker.py` は **messages のみ** 保存。`title` / `channel_name` / `duration_seconds` は **UPDATE なし**（常に null になりうる） | ヘッダタイトルが `動画 {id}` フォールバック、UX-09 ブロック |
+| 動画メタ | タイトル・チャンネル・尺 | ✅ `video_metadata.py` + `fetch_worker.py` で保存（G-01）。取得直後に UPDATE、尺 null 時は messages から fallback | ヘッダにタイトル・尺表示可能 |
 | `/summary` 件数上限 | `analysis_defaults.json` stage7: keywords **10**, topics preview **6**, highlights **5** | `analysis.py` が highlights / keywords / topic preview すべて **`LIMIT 5` 固定** | UX-07, UX-08 |
 | JSON export `authors` | — | `author_stats` 全行出力だが、Stage 1 は **Top 20 のみ** 保存（`author_top_n=20`） | 「全投稿者」と誤解しやすい |
 | markdown-summary | — | **API**（`export.py`）と **Stage 8 キャッシュ**（`stage8.py`）で内容不一致。DL は API 版 | キーワード・話題はキャッシュのみ |
@@ -501,7 +501,7 @@
 - [x] UX-13: スコア説明
 - [ ] UX-14: 相対低活動の検出
 - [ ] UX-15: プロフィールリンク
-- [ ] §2 ギャップ: 動画メタ取得、partial/遷移タイミング、summary API LIMIT
+- [ ] §2 ギャップ: partial/遷移タイミング（G-02 ✅）、summary API LIMIT（G-03/UX-08 ✅）
 
 ---
 
