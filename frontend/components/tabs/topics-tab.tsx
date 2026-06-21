@@ -6,7 +6,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { JumpLinkButton } from "@/components/jump-link-button";
 import { KeywordBurstRanking } from "@/components/keyword-burst-ranking";
 import { TopicBlockThumbnail } from "@/components/topic-block-thumbnail";
 import { TopicTimelineBar } from "@/components/topic-timeline-bar";
@@ -72,7 +71,6 @@ function TopicBlocksTable({
             <th className="px-3 py-2 font-medium tabular-nums">コメント</th>
             <th className="px-3 py-2 font-medium tabular-nums">ユニーク投稿者</th>
             <th className="px-3 py-2 font-medium">スパチャ</th>
-            <th className="px-3 py-2 font-medium">ジャンプ</th>
           </tr>
         </thead>
         <tbody>
@@ -89,11 +87,19 @@ function TopicBlocksTable({
                 {block.block_index + 1}
               </td>
               <td className="px-2 py-2">
-                <TopicBlockThumbnail
-                  videoId={videoId}
-                  startSec={block.start_sec}
-                  label={block.label}
-                />
+                <a
+                  href={block.jump_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={`YouTube ${formatSeconds(block.start_sec)} へジャンプ`}
+                  className="inline-block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <TopicBlockThumbnail
+                    videoId={videoId}
+                    startSec={block.start_sec}
+                    label={block.label}
+                  />
+                </a>
               </td>
               <td className="px-3 py-2 tabular-nums whitespace-nowrap">
                 {formatSeconds(block.start_sec)} – {formatSeconds(block.end_sec)}
@@ -110,13 +116,6 @@ function TopicBlocksTable({
               </td>
               <td className="px-3 py-2 whitespace-nowrap">
                 {formatSuperChatTotals(block.super_chat_total)}
-              </td>
-              <td className="px-3 py-2">
-                <JumpLinkButton
-                  jumpUrl={block.jump_url}
-                  timeText={formatSeconds(block.start_sec)}
-                  size="xs"
-                />
               </td>
             </tr>
           ))}
