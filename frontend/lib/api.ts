@@ -180,6 +180,18 @@ export async function getSummaryWithFallback(
   }
 }
 
+export async function getTopicsWithFallback(
+  videoId: string,
+): Promise<{ data: TopicsResponse; isMock: boolean }> {
+  try {
+    const data = await getTopics(videoId);
+    return { data, isMock: false };
+  } catch {
+    const { getMockTopics } = await import("@/lib/mocks/topics");
+    return { data: getMockTopics(videoId), isMock: true };
+  }
+}
+
 export type TopicBlock = TopicBlockPreview & {
   super_chat_total: SuperChatTotal[];
 };

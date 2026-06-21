@@ -17,7 +17,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { JumpLinkButton } from "@/components/jump-link-button";
 import { KpiCard } from "@/components/kpi-card";
 import { TopicTimelineBar } from "@/components/topic-timeline-bar";
-import { getSummaryWithFallback, type SummaryResponse } from "@/lib/api";
+import { TopicSuperChatRanking } from "@/components/topic-super-chat-ranking";
+import {
+  getSummaryWithFallback,
+  getTopicsWithFallback,
+  type SummaryResponse,
+  type TopicsResponse,
+} from "@/lib/api";
+import { formatSuperChatTotals } from "@/lib/topic-super-chat";
 
 type SummaryTabProps = {
   videoId: string;
@@ -25,15 +32,9 @@ type SummaryTabProps = {
   refreshKey?: number;
 };
 
-function formatSuperChatTotals(totals: SummaryResponse["super_chat_total"]): string {
-  if (totals.length === 0) return "—";
-  return totals
-    .map((t) => `${t.amount.toLocaleString()} ${t.currency}（${t.count}件）`)
-    .join(" / ");
-}
-
 export function SummaryTab({ videoId, durationSeconds, refreshKey = 0 }: SummaryTabProps) {
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
+  const [topics, setTopics] = useState<TopicsResponse | null>(null);
   const [isMock, setIsMock] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -41,11 +42,12 @@ export function SummaryTab({ videoId, durationSeconds, refreshKey = 0 }: Summary
     let cancelled = false;
     setLoading(true);
 
-    getSummaryWithFallback(videoId)
-      .then(({ data, isMock: mock }) => {
+    Promise.all([getSummaryWithFallback(videoId), getTopicsWithFallback(videoId)])
+      .then(([summaryResult, topicsResult]) => {
         if (!cancelled) {
-          setSummary(data);
-          setIsMock(mock);
+          setSummary(summaryResult.data);
+          setTopics(topicsResult.data);
+          setIsMock(summaryResult.isMock || topicsResult.isMock);
         }
       })
       .finally(() => {
@@ -128,6 +130,10 @@ export function SummaryTab({ videoId, durationSeconds, refreshKey = 0 }: Summary
         blocks={summary.topic_blocks_preview}
         durationSeconds={durationSeconds}
       />
+
+      {topics ? (
+        <TopicSuperChatRanking blocks={topics.items} />
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

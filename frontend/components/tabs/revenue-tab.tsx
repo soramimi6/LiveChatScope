@@ -18,7 +18,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiCard } from "@/components/kpi-card";
 import { JumpLinkButton } from "@/components/jump-link-button";
+import { TopicSuperChatRanking } from "@/components/topic-super-chat-ranking";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getTopicsWithFallback, type TopicsResponse } from "@/lib/api";
 import {
   buildThankYouCsv,
   downloadTextFile,
@@ -415,6 +417,7 @@ function SuperChatEmptyState({
 
 export function RevenueTab({ videoId }: RevenueTabProps) {
   const [data, setData] = useState<RevenueTabData | null>(null);
+  const [topics, setTopics] = useState<TopicsResponse | null>(null);
   const [listItems, setListItems] = useState<SuperChatItem[]>([]);
   const [page, setPage] = useState(1);
   const [listTotal, setListTotal] = useState(0);
@@ -429,13 +432,16 @@ export function RevenueTab({ videoId }: RevenueTabProps) {
       setLoading(true);
       setPage(1);
       try {
-        const { data: tabData, isMock: mock } =
-          await getRevenueTabDataWithFallback(videoId);
+        const [{ data: tabData, isMock: mock }, topicsResult] = await Promise.all([
+          getRevenueTabDataWithFallback(videoId),
+          getTopicsWithFallback(videoId),
+        ]);
         if (!cancelled) {
           setData(tabData);
+          setTopics(topicsResult.data);
           setListItems(tabData.superChats.items);
           setListTotal(tabData.superChats.pagination.total);
-          setIsMock(mock);
+          setIsMock(mock || topicsResult.isMock);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -537,6 +543,8 @@ export function RevenueTab({ videoId }: RevenueTabProps) {
       ) : null}
 
       <CurrencySummary data={data} />
+
+      {topics ? <TopicSuperChatRanking blocks={topics.items} /> : null}
 
       <Card>
         <CardHeader>
