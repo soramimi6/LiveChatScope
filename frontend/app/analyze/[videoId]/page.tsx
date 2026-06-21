@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { DisclaimerFooter } from "@/components/disclaimer-footer";
@@ -104,6 +104,15 @@ export default function AnalyzePage() {
             <CardTitle>分析進捗</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {status?.fetch_status === "pending" || status?.fetch_status === "fetching" ? (
+              <Alert>
+                <AlertTitle>取得に時間がかかることがあります</AlertTitle>
+                <AlertDescription>
+                  配信の長さやコメント数により、チャット取得に 10〜30 分以上かかる場合があります。
+                  この画面を開いたままお待ちください。ブラウザや API サーバーを閉じると中断されることがあります。
+                </AlertDescription>
+              </Alert>
+            ) : null}
             <p className="text-sm text-muted-foreground">{stepLabel(status)}</p>
             <Progress value={progressValue(status)} />
             {status ? (
