@@ -81,6 +81,40 @@ def test_author_profile_api(client):
     assert len(payload["top_topics"]) == 2
     assert payload["top_topics"][0]["label"] == "Opening"
     assert payload["top_topics"][1]["label"] == "Main"
+    assert payload["registered_during_stream"] is False
+    assert payload["used_membership_gift"] is False
+    assert payload["membership_registration"] is None
+    assert payload["membership_gift"] is None
+
+
+def test_author_profile_membership_moments(client):
+    db_path = settings.database_path
+    _insert_profile_fixture(db_path)
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        """
+        INSERT INTO membership_registrations (
+            video_id, author_id, author_name, time_in_seconds, message_id
+        ) VALUES ('vid1', 'UC-author-1', 'たろう', 120.0, 'mem1')
+        """
+    )
+    conn.execute(
+        """
+        INSERT INTO membership_gift_users (
+            video_id, author_id, author_name, time_in_seconds, message_id
+        ) VALUES ('vid1', 'UC-author-1', 'たろう', 900.0, 'gift1')
+        """
+    )
+    conn.commit()
+    conn.close()
+
+    response = client.get("/api/v1/videos/vid1/authors/UC-author-1/profile")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["registered_during_stream"] is True
+    assert payload["used_membership_gift"] is True
+    assert payload["membership_registration"]["time_text"] == "00:02:00"
+    assert payload["membership_gift"]["time_text"] == "00:15:00"
 
 
 def test_author_profile_not_found(client):

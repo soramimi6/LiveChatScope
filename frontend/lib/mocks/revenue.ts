@@ -191,13 +191,17 @@ export function getMockSuperChats(
   videoId: string,
   page = 1,
   pageSize = 50,
+  currency?: string,
 ): SuperChatsResponse {
-  const allItems = withJumpUrls(videoId);
+  const allItems = withJumpUrls(videoId).filter(
+    (item) => !currency || item.currency === currency,
+  );
   const start = (page - 1) * pageSize;
   const items = allItems.slice(start, start + pageSize);
 
   return {
     video_id: videoId,
+    currency: currency ?? null,
     items,
     pagination: {
       page,

@@ -129,6 +129,19 @@ def build_membership_gifts(conn: sqlite3.Connection, video_id: str) -> dict:
     }
 
 
+def _membership_moment(
+    video_id: str,
+    time_sec: float | None,
+) -> dict | None:
+    if time_sec is None:
+        return None
+    return {
+        "time_in_seconds": float(time_sec),
+        "time_text": format_time_text(time_sec),
+        "jump_url": jump_url(video_id, time_sec),
+    }
+
+
 def author_membership_flags(
     conn: sqlite3.Connection,
     video_id: str,
@@ -153,4 +166,43 @@ def author_membership_flags(
     return {
         "registered_during_stream": registered is not None,
         "used_membership_gift": gifted is not None,
+    }
+
+
+def author_membership_profile(
+    conn: sqlite3.Connection,
+    video_id: str,
+    author_id: str,
+) -> dict:
+    flags = author_membership_flags(conn, video_id, author_id)
+
+    registration_row = conn.execute(
+        """
+        SELECT time_in_seconds
+        FROM membership_registrations
+        WHERE video_id = ? AND author_id = ?
+        LIMIT 1
+        """,
+        (video_id, author_id),
+    ).fetchone()
+    gift_row = conn.execute(
+        """
+        SELECT time_in_seconds
+        FROM membership_gift_users
+        WHERE video_id = ? AND author_id = ?
+        LIMIT 1
+        """,
+        (video_id, author_id),
+    ).fetchone()
+
+    return {
+        **flags,
+        "membership_registration": _membership_moment(
+            video_id,
+            registration_row["time_in_seconds"] if registration_row else None,
+        ),
+        "membership_gift": _membership_moment(
+            video_id,
+            gift_row["time_in_seconds"] if gift_row else None,
+        ),
     }

@@ -60,6 +60,7 @@ export type SuperChatItem = {
 
 export type SuperChatsResponse = {
   video_id: string;
+  currency?: string | null;
   items: SuperChatItem[];
   pagination: { page: number; page_size: number; total: number };
 };
@@ -90,9 +91,21 @@ export function getSuperChatSummary(videoId: string) {
   );
 }
 
-export function getSuperChats(videoId: string, page = 1, pageSize = 50) {
+export function getSuperChats(
+  videoId: string,
+  page = 1,
+  pageSize = 50,
+  currency?: string,
+) {
+  const params = new URLSearchParams({
+    page: String(page),
+    page_size: String(pageSize),
+  });
+  if (currency) {
+    params.set("currency", currency);
+  }
   return request<SuperChatsResponse>(
-    `/api/v1/videos/${videoId}/super-chats?page=${page}&page_size=${pageSize}`,
+    `/api/v1/videos/${videoId}/super-chats?${params.toString()}`,
   );
 }
 

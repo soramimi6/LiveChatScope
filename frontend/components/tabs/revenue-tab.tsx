@@ -20,6 +20,7 @@ import { KpiCard } from "@/components/kpi-card";
 import { JumpLinkButton } from "@/components/jump-link-button";
 import { TopicSuperChatRanking } from "@/components/topic-super-chat-ranking";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Sheet } from "@/components/ui/sheet";
 import { getTopicsWithFallback, type TopicsResponse } from "@/lib/api";
 import {
   buildThankYouCsv,
@@ -62,7 +63,13 @@ function buildChartData(data: RevenueTabData) {
   });
 }
 
-function CurrencySummary({ data }: { data: RevenueTabData }) {
+function CurrencySummary({
+  data,
+  onCurrencyClick,
+}: {
+  data: RevenueTabData;
+  onCurrencyClick: (currency: string) => void;
+}) {
   const rows = data.summary.by_currency;
 
   if (rows.length === 0) {
@@ -78,10 +85,88 @@ function CurrencySummary({ data }: { data: RevenueTabData }) {
             title={`合計（${row.currency}）`}
             value={`${row.total_amount.toLocaleString()} ${row.currency}`}
             description={`${row.count.toLocaleString()} 件`}
+            onClick={() => onCurrencyClick(row.currency)}
           />
         ))}
       </div>
     </section>
+  );
+}
+
+function SuperChatCurrencySheet({
+  videoId,
+  currency,
+  open,
+  onOpenChange,
+  isMock,
+}: {
+  videoId: string;
+  currency: string | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  isMock: boolean;
+}) {
+  const [items, setItems] = useState<SuperChatItem[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  const loadPage = useCallback(
+    async (nextPage: number) => {
+      if (!currency) return;
+      setLoading(true);
+      try {
+        if (isMock) {
+          const mock = getMockSuperChats(videoId, nextPage, PAGE_SIZE, currency);
+          setItems(mock.items);
+          setTotal(mock.pagination.total);
+          setPage(nextPage);
+          return;
+        }
+        const res = await getSuperChats(videoId, nextPage, PAGE_SIZE, currency);
+        setItems(res.items);
+        setTotal(res.pagination.total);
+        setPage(nextPage);
+      } catch {
+        const mock = getMockSuperChats(videoId, nextPage, PAGE_SIZE, currency);
+        setItems(mock.items);
+        setTotal(mock.pagination.total);
+        setPage(nextPage);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [videoId, currency, isMock],
+  );
+
+  useEffect(() => {
+    if (!open || !currency) {
+      setItems([]);
+      setPage(1);
+      setTotal(0);
+      return;
+    }
+    void loadPage(1);
+  }, [open, currency, loadPage]);
+
+  if (!currency) return null;
+
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`${currency} スパチャ明細`}
+      description={`${total.toLocaleString()} 件の内訳`}
+      className="max-w-2xl"
+    >
+      <SuperChatsTable
+        items={items}
+        page={page}
+        total={total}
+        loading={loading}
+        onPageChange={loadPage}
+      />
+    </Sheet>
   );
 }
 
@@ -424,6 +509,7 @@ export function RevenueTab({ videoId }: RevenueTabProps) {
   const [listLoading, setListLoading] = useState(false);
   const [isMock, setIsMock] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedCurrency, setSelectedCurrency] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -542,7 +628,17 @@ export function RevenueTab({ videoId }: RevenueTabProps) {
         </Alert>
       ) : null}
 
-      <CurrencySummary data={data} />
+      <CurrencySummary data={data} onCurrencyClick={setSelectedCurrency} />
+
+      <SuperChatCurrencySheet
+        videoId={videoId}
+        currency={selectedCurrency}
+        open={selectedCurrency != null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedCurrency(null);
+        }}
+        isMock={isMock}
+      />
 
       {topics ? <TopicSuperChatRanking blocks={topics.items} /> : null}
 

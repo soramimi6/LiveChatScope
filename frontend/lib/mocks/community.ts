@@ -211,5 +211,19 @@ export function getMockAuthorProfile(
     })),
     registered_during_stream: author.registered_during_stream,
     used_membership_gift: author.used_membership_gift,
+    membership_registration: author.registered_during_stream
+      ? {
+          time_in_seconds: 620,
+          time_text: "00:10:20",
+          jump_url: youtubeJumpUrl(videoId, 620),
+        }
+      : null,
+    membership_gift: author.used_membership_gift
+      ? {
+          time_in_seconds: 1800,
+          time_text: "00:30:00",
+          jump_url: youtubeJumpUrl(videoId, 1800),
+        }
+      : null,
   };
 }

@@ -161,6 +161,44 @@ export function AuthorProfileSheet({
             <p className="text-sm">{formatSuperChatTotals(profile.super_chat_total)}</p>
           </section>
 
+          {profile.membership_registration || profile.membership_gift ? (
+            <section className="space-y-2">
+              <h3 className="text-sm font-medium">メンバーシップ</h3>
+              <div className="space-y-2">
+                {profile.membership_registration ? (
+                  <div className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground">配信中に登録</p>
+                      <p className="font-medium tabular-nums">
+                        {profile.membership_registration.time_text}
+                      </p>
+                    </div>
+                    <JumpLinkButton
+                      jumpUrl={profile.membership_registration.jump_url}
+                      timeText={profile.membership_registration.time_text}
+                      size="xs"
+                    />
+                  </div>
+                ) : null}
+                {profile.membership_gift ? (
+                  <div className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground">ギフト告知</p>
+                      <p className="font-medium tabular-nums">
+                        {profile.membership_gift.time_text}
+                      </p>
+                    </div>
+                    <JumpLinkButton
+                      jumpUrl={profile.membership_gift.jump_url}
+                      timeText={profile.membership_gift.time_text}
+                      size="xs"
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+
           <section className="space-y-2">
             <h3 className="text-sm font-medium">発言の多い話題</h3>
             {profile.top_topics.length === 0 ? (

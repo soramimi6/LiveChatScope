@@ -159,7 +159,11 @@ export function VideoDashboard() {
             <RevenueTab videoId={videoId} />
           </TabsContent>
           <TabsContent value="community">
-            <CommunityTab videoId={videoId} refreshKey={refreshKey} />
+            <CommunityTab
+              videoId={videoId}
+              durationSeconds={meta?.duration_seconds}
+              refreshKey={refreshKey}
+            />
           </TabsContent>
           <TabsContent value="search">
             <SearchTab videoId={videoId} />

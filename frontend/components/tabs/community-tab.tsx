@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { Info, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CollapsibleSection } from "@/components/collapsible-section";
 import {
   getAuthorsByTopicWithFallback,
   getCommunityTabDataWithFallback,
@@ -28,6 +29,7 @@ import type {
 
 type CommunityTabProps = {
   videoId: string;
+  durationSeconds?: number | null;
   refreshKey?: number;
 };
 
@@ -170,27 +172,6 @@ function MembershipBurstContext({ events }: { events: MembershipEventsResponse }
         ))}
       </ol>
     </div>
-  );
-}
-
-function CollapsibleSection({
-  title,
-  count,
-  children,
-  defaultOpen = false,
-}: {
-  title: string;
-  count: number;
-  children: ReactNode;
-  defaultOpen?: boolean;
-}) {
-  return (
-    <details className="rounded-lg border" open={defaultOpen}>
-      <summary className="cursor-pointer list-none px-4 py-3 font-medium [&::-webkit-details-marker]:hidden">
-        {title}（{count.toLocaleString()} 人）
-      </summary>
-      <div className="border-t px-4 py-3">{children}</div>
-    </details>
   );
 }
 
@@ -444,7 +425,11 @@ function TopicAuthorsSection({
   );
 }
 
-export function CommunityTab({ videoId, refreshKey = 0 }: CommunityTabProps) {
+export function CommunityTab({
+  videoId,
+  durationSeconds,
+  refreshKey = 0,
+}: CommunityTabProps) {
   const [data, setData] = useState<CommunityTabData | null>(null);
   const [isMock, setIsMock] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -527,7 +512,10 @@ export function CommunityTab({ videoId, refreshKey = 0 }: CommunityTabProps) {
           <CardTitle>メンバー登録タイムライン</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <MembershipTimelineChart data={data.membershipEvents} />
+          <MembershipTimelineChart
+            data={data.membershipEvents}
+            durationSeconds={durationSeconds}
+          />
           <MembershipBurstContext events={data.membershipEvents} />
         </CardContent>
       </Card>

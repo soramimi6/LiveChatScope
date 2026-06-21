@@ -15,6 +15,7 @@ from app.services.analysis.refilter_pipeline import run_refilter_pipeline
 from app.services.author_profile import build_author_profile
 from app.services.membership_api import (
     author_membership_flags,
+    author_membership_profile,
     build_membership_events,
     build_membership_gifts,
 )
@@ -578,15 +579,22 @@ def get_super_chats(
     video_id: str,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=1, le=100),
+    currency: str | None = Query(default=None, min_length=1, max_length=8),
 ):
     row = get_video_row(video_id)
     require_analysis_ready(row)
 
     offset = (page - 1) * page_size
+    where_clause = "WHERE video_id = ?"
+    params: list = [video_id]
+    if currency is not None:
+        where_clause += " AND currency = ?"
+        params.append(currency.upper())
+
     with get_connection() as conn:
         total = conn.execute(
-            "SELECT COUNT(*) AS cnt FROM super_chat_events WHERE video_id = ?",
-            (video_id,),
+            f"SELECT COUNT(*) AS cnt FROM super_chat_events {where_clause}",
+            params,
         ).fetchone()["cnt"]
         items = [
             {
@@ -599,19 +607,20 @@ def get_super_chats(
                 "jump_url": jump_url(video_id, sc["time_in_seconds"]),
             }
             for sc in conn.execute(
-                """
+                f"""
                 SELECT time_in_seconds, author_name, amount, currency, text
                 FROM super_chat_events
-                WHERE video_id = ?
+                {where_clause}
                 ORDER BY time_in_seconds ASC
                 LIMIT ? OFFSET ?
                 """,
-                (video_id, page_size, offset),
+                [*params, page_size, offset],
             ).fetchall()
         ]
 
     return {
         "video_id": video_id,
+        "currency": currency.upper() if currency else None,
         "items": items,
         "pagination": {"page": page, "page_size": page_size, "total": total},
     }
@@ -753,7 +762,7 @@ def get_author_profile(video_id: str, author_id: str):
                 status_code=404,
                 detail={"error": {"code": "NOT_FOUND", "message": "投稿者が見つかりません"}},
             )
-        profile.update(author_membership_flags(conn, video_id, author_id))
+        profile.update(author_membership_profile(conn, video_id, author_id))
 
     return profile
 

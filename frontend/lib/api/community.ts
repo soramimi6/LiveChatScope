@@ -88,6 +88,8 @@ export type AuthorProfileResponse = {
   top_topics: AuthorProfileTopic[];
   registered_during_stream: boolean;
   used_membership_gift: boolean;
+  membership_registration: AuthorMessageMoment | null;
+  membership_gift: AuthorMessageMoment | null;
 };
 
 export type MembershipRegistrationItem = {
