@@ -7,6 +7,7 @@ from fastapi.responses import Response
 
 from app.api.common import format_time_text, get_video_row, jump_url, require_analysis_ready
 from app.db import get_connection
+from app.services.analysis.stage8 import _build_markdown_clips, _build_markdown_thanks
 
 router = APIRouter(prefix="/videos", tags=["export"])
 
@@ -64,9 +65,19 @@ def export_video(
     if export_type == "markdown-summary":
         body = _build_markdown_summary(video_id, row)
     elif export_type == "markdown-clips":
-        body = _build_markdown_clips_stub(video_id, row)
+        if row["analysis_status"] == "complete":
+            title = row["title"] or video_id
+            with get_connection() as conn:
+                body = _build_markdown_clips(conn, video_id, title)
+        else:
+            body = _build_markdown_clips_stub(video_id, row)
     else:
-        body = _build_markdown_thanks_stub(video_id, row)
+        if row["analysis_status"] == "complete":
+            title = row["title"] or video_id
+            with get_connection() as conn:
+                body = _build_markdown_thanks(conn, video_id, title)
+        else:
+            body = _build_markdown_thanks_stub(video_id, row)
 
     headers = {}
     disposition = _content_disposition(f"{video_id}-{export_type}.md", download)

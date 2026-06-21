@@ -100,7 +100,45 @@ def test_e2e_full_analysis_flow():
             assert response.status_code == 200, f"{path}: {response.status_code} {response.text}"
             _assert_jump_urls_in_payload(response.json(), video_id)
 
-        for export_type in ("json", "csv"):
-            path = f"/api/v1/videos/{video_id}/export/{export_type}"
-            response = client.get(_api(path))
-            assert response.status_code == 200, f"{path}: {response.status_code} {response.text}"
+        # E2E-01 step 7: JSON / CSV export
+        json_response = client.get(_api(f"/api/v1/videos/{video_id}/export/json"))
+        assert json_response.status_code == 200, json_response.text
+        json_body = json_response.json()
+        assert json_body["video_id"] == video_id
+        assert json_body.get("message_count", 0) > 0
+        assert "density" in json_body
+        assert "authors" in json_body
+
+        csv_response = client.get(_api(f"/api/v1/videos/{video_id}/export/csv"))
+        assert csv_response.status_code == 200, csv_response.text
+        csv_text = csv_response.text
+        assert "time_in_seconds" in csv_text
+        assert "author_name" in csv_text
+        assert "message_type" in csv_text
+        csv_lines = [line for line in csv_text.strip().splitlines() if line]
+        assert len(csv_lines) >= 2, "CSV should include header and at least one message row"
+
+        # E2E-01 step 8: markdown-clips / markdown-thanks export
+        clips_response = client.get(
+            _api(f"/api/v1/videos/{video_id}/export/markdown-clips")
+        )
+        assert clips_response.status_code == 200, clips_response.text
+        clips_text = clips_response.text.strip()
+        assert clips_text
+        assert "切り抜き候補" in clips_text
+        assert (
+            "score=" in clips_text
+            or "盛り上がり候補は検出されませんでした" in clips_text
+        )
+
+        thanks_response = client.get(
+            _api(f"/api/v1/videos/{video_id}/export/markdown-thanks")
+        )
+        assert thanks_response.status_code == 200, thanks_response.text
+        thanks_text = thanks_response.text.strip()
+        assert thanks_text
+        assert "スパチャ感謝文" in thanks_text
+        assert (
+            "スパチャはありませんでした" in thanks_text
+            or "お礼リスト" in thanks_text
+        )
