@@ -5,6 +5,11 @@ from datetime import datetime, timezone
 from chat_downloader import ChatDownloader
 
 from app.db import get_connection
+from app.services.video_metadata import (
+    extract_video_metadata,
+    fallback_duration_from_messages,
+    save_video_metadata,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +73,16 @@ def fetch_chat_replay(video_id: str, source_url: str) -> None:
 
     try:
         chat = downloader.get_chat(source_url)
+        try:
+            metadata = extract_video_metadata(chat, downloader, video_id)
+            save_video_metadata(video_id, metadata)
+        except Exception:
+            logger.warning(
+                "Failed to save video metadata for %s",
+                video_id,
+                exc_info=True,
+            )
+
         for item in chat:
             row = _normalize_message(video_id, item)
             if row is None:
@@ -86,6 +101,15 @@ def fetch_chat_replay(video_id: str, source_url: str) -> None:
         if batch:
             _insert_batch(batch)
             total += len(batch)
+
+        try:
+            fallback_duration_from_messages(video_id)
+        except Exception:
+            logger.warning(
+                "Failed to apply duration fallback for %s",
+                video_id,
+                exc_info=True,
+            )
 
         with get_connection() as conn:
             conn.execute(
