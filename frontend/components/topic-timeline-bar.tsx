@@ -1,13 +1,5 @@
 "use client";
 
-import {
-  Bar,
-  BarChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { TopicBlockPreview } from "@/lib/api";
 import { formatSeconds } from "@/lib/format";
@@ -38,36 +30,6 @@ function formatAxisMinutes(seconds: number): string {
   return `${m}分`;
 }
 
-type TimelineTooltipProps = {
-  active?: boolean;
-  payload?: Array<{ dataKey?: string; value?: number; color?: string }>;
-  blocks: TopicBlockPreview[];
-};
-
-function TimelineTooltip({ active, payload, blocks }: TimelineTooltipProps) {
-  if (!active || !payload?.length) return null;
-
-  const entry = payload.find((p) => p.value && p.value > 0);
-  if (!entry?.dataKey) return null;
-
-  const index = Number(String(entry.dataKey).replace("block_", ""));
-  const block = blocks[index];
-  if (!block) return null;
-
-  return (
-    <div className="rounded-lg border bg-card px-3 py-2 text-xs shadow-md">
-      <p className="font-medium">{block.label}</p>
-      <p className="text-muted-foreground">
-        {formatSeconds(block.start_sec)} – {formatSeconds(block.end_sec)}
-      </p>
-      <p className="text-muted-foreground">
-        {block.message_count.toLocaleString()} 件 / ユニーク投稿者{" "}
-        {block.unique_authors.toLocaleString()}
-      </p>
-    </div>
-  );
-}
-
 export function TopicTimelineBar({ blocks, durationSeconds }: TopicTimelineBarProps) {
   if (blocks.length === 0) {
     return (
@@ -84,14 +46,10 @@ export function TopicTimelineBar({ blocks, durationSeconds }: TopicTimelineBarPr
 
   const totalDuration =
     durationSeconds ?? Math.max(...blocks.map((b) => b.end_sec), 0);
-
-  const stackRow: Record<string, number> = {};
-  blocks.forEach((block, index) => {
-    stackRow[`block_${index}`] = Math.max(block.end_sec - block.start_sec, 0);
-  });
+  const axisMax = totalDuration || 1;
 
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((ratio) =>
-    Math.round(totalDuration * ratio),
+    Math.round(axisMax * ratio),
   );
 
   return (
@@ -100,42 +58,36 @@ export function TopicTimelineBar({ blocks, durationSeconds }: TopicTimelineBarPr
         <CardTitle>構成タイムライン</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-16 w-full" aria-label="配信構成タイムライン">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              layout="vertical"
-              data={[stackRow]}
-              margin={{ top: 0, right: 8, left: 8, bottom: 0 }}
-            >
-              <XAxis
-                type="number"
-                domain={[0, totalDuration || 1]}
-                ticks={ticks}
-                tickFormatter={formatAxisMinutes}
-                tick={{ fontSize: 11 }}
+        <div
+          className="relative h-4 w-full overflow-hidden rounded-md bg-muted"
+          aria-label="配信構成タイムライン"
+          data-testid="timeline-track"
+        >
+          {blocks.map((block, index) => {
+            const leftPct = (block.start_sec / axisMax) * 100;
+            const widthPct =
+              (Math.max(block.end_sec - block.start_sec, 0) / axisMax) * 100;
+            const color = BLOCK_COLORS[index % BLOCK_COLORS.length];
+
+            return (
+              <div
+                key={block.block_id}
+                data-testid="timeline-segment"
+                className="absolute top-0 h-full min-w-px"
+                style={{
+                  left: `${leftPct}%`,
+                  width: `${widthPct}%`,
+                  backgroundColor: color,
+                }}
+                title={`${block.label} (${formatSeconds(block.start_sec)} – ${formatSeconds(block.end_sec)})`}
               />
-              <YAxis type="category" dataKey="name" hide width={0} />
-              <Tooltip
-                content={<TimelineTooltip blocks={blocks} />}
-                cursor={{ fill: "rgba(255,255,255,0.05)" }}
-              />
-              {blocks.map((block, index) => (
-                <Bar
-                  key={block.block_id}
-                  dataKey={`block_${index}`}
-                  stackId="timeline"
-                  fill={BLOCK_COLORS[index % BLOCK_COLORS.length]}
-                  radius={
-                    index === 0
-                      ? [4, 0, 0, 4]
-                      : index === blocks.length - 1
-                        ? [0, 4, 4, 0]
-                        : [0, 0, 0, 0]
-                  }
-                />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
+            );
+          })}
+        </div>
+        <div className="mt-1 flex justify-between text-[11px] tabular-nums text-muted-foreground">
+          {ticks.map((tick) => (
+            <span key={tick}>{formatAxisMinutes(tick)}</span>
+          ))}
         </div>
         <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
           {blocks.map((block, index) => (
