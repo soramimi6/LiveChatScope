@@ -66,33 +66,69 @@ function HighlightsList({ items }: { items: HighlightItem[] }) {
 
   return (
     <ol className="space-y-3">
-      {items.map((item) => (
-        <li
-          key={item.rank}
-          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-3"
-        >
-          <div className="min-w-0 space-y-1">
-            <p className="font-medium tabular-nums">
-              {item.rank}. {item.time_text}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              スコア {item.score.toFixed(1)}
-              <span
-                className="ml-1 inline-flex align-middle text-muted-foreground"
-                title="スコア = その時刻のコメント密度 ÷ 移動平均（約5分窓）。1.0 は平均並み、1.5 以上で候補に採用。"
-                aria-label="スコアの見方"
-              >
-                <Info className="size-3.5" />
-              </span>
-            </p>
-            <p className="text-xs text-muted-foreground">
-              切り抜き範囲（±30秒）: {formatSeconds(item.clip_start_sec)} –{" "}
-              {formatSeconds(item.clip_end_sec)}
-            </p>
-          </div>
-          <JumpLinkButton jumpUrl={item.jump_url} timeText={item.time_text} />
-        </li>
-      ))}
+      {items.map((item) => {
+        const sampleMessages = item.context?.sample_messages.slice(0, 3) ?? [];
+        const topAuthors = item.context?.top_authors ?? [];
+
+        return (
+          <li
+            key={item.rank}
+            className="rounded-lg border px-3 py-3"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0 space-y-1">
+                <p className="font-medium tabular-nums">
+                  {item.rank}. {item.time_text}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  スコア {item.score.toFixed(1)}
+                  <span
+                    className="ml-1 inline-flex align-middle text-muted-foreground"
+                    title="スコア = その時刻のコメント密度 ÷ 移動平均（約5分窓）。1.0 は平均並み、1.5 以上で候補に採用。"
+                    aria-label="スコアの見方"
+                  >
+                    <Info className="size-3.5" />
+                  </span>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  切り抜き範囲（±30秒）: {formatSeconds(item.clip_start_sec)} –{" "}
+                  {formatSeconds(item.clip_end_sec)}
+                </p>
+              </div>
+              <JumpLinkButton jumpUrl={item.jump_url} timeText={item.time_text} />
+            </div>
+
+            {sampleMessages.length > 0 ? (
+              <div className="mt-3 space-y-1.5 border-t pt-3">
+                <p className="text-xs font-medium text-muted-foreground">周辺コメント</p>
+                <ul className="space-y-1">
+                  {sampleMessages.map((msg, index) => (
+                    <li
+                      key={`${item.rank}-${msg.time_in_seconds}-${index}`}
+                      className="text-xs text-muted-foreground"
+                    >
+                      <span className="font-medium text-foreground">
+                        {msg.author_name ?? "匿名"}
+                      </span>
+                      <span className="mx-1 tabular-nums">{msg.time_text}</span>
+                      <span>{msg.text}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {topAuthors.length > 0 ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                活発な投稿者:{" "}
+                {topAuthors
+                  .map((author) => `${author.author_name ?? "匿名"} (${author.message_count}件)`)
+                  .join(" · ")}
+              </p>
+            ) : null}
+          </li>
+        );
+      })}
     </ol>
   );
 }
