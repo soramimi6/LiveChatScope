@@ -23,3 +23,9 @@ www
 草生える
 wktk
 88888
+# --- #6 loop2: chat emoticon / symbol tokens ---
+:_
+::_
+::
+:)
+:(
