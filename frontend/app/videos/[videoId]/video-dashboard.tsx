@@ -15,6 +15,7 @@ import { SearchTab } from "@/components/tabs/search-tab";
 import { SummaryTab } from "@/components/tabs/summary-tab";
 import { TopicsTab } from "@/components/tabs/topics-tab";
 import { getVideo, type VideoMetaResponse } from "@/lib/api";
+import { formatSeconds } from "@/lib/format";
 
 const TABS = [
   { id: "summary", label: "サマリー" },
@@ -39,11 +40,18 @@ export function VideoDashboard() {
     getVideo(videoId).then(setMeta).catch(() => setMeta(null));
   }, [videoId]);
 
+  const headerSubtitle = [
+    meta?.channel_name,
+    meta?.duration_seconds != null ? formatSeconds(meta.duration_seconds) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ") || undefined;
+
   return (
     <div className="flex min-h-full flex-col">
       <SiteHeader
         title={meta?.title ?? `動画 ${videoId}`}
-        subtitle={meta?.channel_name ?? undefined}
+        subtitle={headerSubtitle}
       />
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
