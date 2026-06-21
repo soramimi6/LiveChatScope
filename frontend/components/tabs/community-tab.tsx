@@ -19,6 +19,7 @@ import { formatSeconds } from "@/lib/format";
 
 type CommunityTabProps = {
   videoId: string;
+  refreshKey?: number;
 };
 
 const CORE_REGULAR_DESCRIPTION =
@@ -119,12 +120,14 @@ function TopicAuthorsSection({
   selectedBlockId,
   onSelectBlock,
   initialIsMock,
+  refreshKey = 0,
 }: {
   videoId: string;
   blocks: TopicBlock[];
   selectedBlockId: string;
   onSelectBlock: (blockId: string) => void;
   initialIsMock: boolean;
+  refreshKey?: number;
 }) {
   const [topicAuthors, setTopicAuthors] = useState<AuthorsByTopicResponse | null>(null);
   const [topicIsMock, setTopicIsMock] = useState(initialIsMock);
@@ -150,7 +153,7 @@ function TopicAuthorsSection({
     return () => {
       cancelled = true;
     };
-  }, [videoId, selectedBlockId]);
+  }, [videoId, selectedBlockId, refreshKey]);
 
   const selectedBlock = blocks.find((block) => block.block_id === selectedBlockId);
 
@@ -183,7 +186,7 @@ function TopicAuthorsSection({
   );
 }
 
-export function CommunityTab({ videoId }: CommunityTabProps) {
+export function CommunityTab({ videoId, refreshKey = 0 }: CommunityTabProps) {
   const [data, setData] = useState<CommunityTabData | null>(null);
   const [isMock, setIsMock] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -208,7 +211,7 @@ export function CommunityTab({ videoId }: CommunityTabProps) {
     return () => {
       cancelled = true;
     };
-  }, [videoId]);
+  }, [videoId, refreshKey]);
 
   if (loading) {
     return (
@@ -270,6 +273,7 @@ export function CommunityTab({ videoId }: CommunityTabProps) {
             selectedBlockId={selectedBlockId}
             onSelectBlock={setSelectedBlockId}
             initialIsMock={isMock}
+            refreshKey={refreshKey}
           />
         </CardContent>
       </Card>

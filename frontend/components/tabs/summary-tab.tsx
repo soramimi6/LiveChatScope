@@ -22,6 +22,7 @@ import { getSummaryWithFallback, type SummaryResponse } from "@/lib/api";
 type SummaryTabProps = {
   videoId: string;
   durationSeconds?: number | null;
+  refreshKey?: number;
 };
 
 function formatSuperChatTotals(totals: SummaryResponse["super_chat_total"]): string {
@@ -31,7 +32,7 @@ function formatSuperChatTotals(totals: SummaryResponse["super_chat_total"]): str
     .join(" / ");
 }
 
-export function SummaryTab({ videoId, durationSeconds }: SummaryTabProps) {
+export function SummaryTab({ videoId, durationSeconds, refreshKey = 0 }: SummaryTabProps) {
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [isMock, setIsMock] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -54,7 +55,7 @@ export function SummaryTab({ videoId, durationSeconds }: SummaryTabProps) {
     return () => {
       cancelled = true;
     };
-  }, [videoId]);
+  }, [videoId, refreshKey]);
 
   if (loading) {
     return (

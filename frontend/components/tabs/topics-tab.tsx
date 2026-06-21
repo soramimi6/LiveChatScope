@@ -20,6 +20,7 @@ import { formatSeconds } from "@/lib/format";
 type TopicsTabProps = {
   videoId: string;
   durationSeconds?: number | null;
+  refreshKey?: number;
 };
 
 function formatSuperChatTotals(totals: SuperChatTotal[]): string {
@@ -173,7 +174,7 @@ function KeywordsSection({ keywords }: { keywords: TopicsTabData["keywords"] }) 
   );
 }
 
-export function TopicsTab({ videoId, durationSeconds }: TopicsTabProps) {
+export function TopicsTab({ videoId, durationSeconds, refreshKey = 0 }: TopicsTabProps) {
   const [data, setData] = useState<TopicsTabData | null>(null);
   const [isMock, setIsMock] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -197,7 +198,7 @@ export function TopicsTab({ videoId, durationSeconds }: TopicsTabProps) {
     return () => {
       cancelled = true;
     };
-  }, [videoId]);
+  }, [videoId, refreshKey]);
 
   const scrollToBlock = (blockId: string) => {
     rowRefs.current[blockId]?.scrollIntoView({ behavior: "smooth", block: "nearest" });

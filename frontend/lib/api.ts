@@ -55,6 +55,20 @@ export type VideoStatusResponse = {
   error: { code: string; message: string } | null;
 };
 
+export type DisplayFilter = {
+  exclude_stamp_only: boolean;
+  exclude_ng_keywords: boolean;
+  ng_keywords: string[];
+  excluded_author_ids: string[];
+};
+
+export const DEFAULT_DISPLAY_FILTER: DisplayFilter = {
+  exclude_stamp_only: true,
+  exclude_ng_keywords: false,
+  ng_keywords: [],
+  excluded_author_ids: [],
+};
+
 export type VideoMetaResponse = {
   video_id: string;
   title: string | null;
@@ -65,6 +79,12 @@ export type VideoMetaResponse = {
   analysis_status: string;
   fetched_at: string | null;
   analyzed_at: string | null;
+  display_filter?: DisplayFilter;
+};
+
+export type AnalysisRefilterResponse = {
+  video_id: string;
+  analysis_status: string;
 };
 
 export function createVideo(url: string) {
@@ -80,6 +100,16 @@ export function getVideoStatus(videoId: string) {
 
 export function getVideo(videoId: string) {
   return request<VideoMetaResponse>(`/api/v1/videos/${videoId}`);
+}
+
+export function postAnalysisRefilter(videoId: string, filter: DisplayFilter) {
+  return request<AnalysisRefilterResponse>(
+    `/api/v1/videos/${videoId}/analysis/refilter`,
+    {
+      method: "POST",
+      body: JSON.stringify(filter),
+    },
+  );
 }
 
 export type SummaryPeak = {

@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 type ExportMenuProps = {
   videoId: string;
   className?: string;
+  analysisStatus?: string;
 };
 
 type ExportAction = "download" | "copy";
@@ -69,12 +70,17 @@ function actionLabel(option: ExportOption, action: ExportAction): string {
   return `${option.label}を${verb}`;
 }
 
-export function ExportMenu({ videoId, className }: ExportMenuProps) {
+export function ExportMenu({
+  videoId,
+  className,
+  analysisStatus,
+}: ExportMenuProps) {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{
     kind: "success" | "error";
     message: string;
   } | null>(null);
+  const disabledByAnalysis = analysisStatus === "running";
 
   const handleAction = useCallback(
     async (type: ExportType, action: ExportAction) => {
@@ -115,7 +121,7 @@ export function ExportMenu({ videoId, className }: ExportMenuProps) {
               variant="outline"
               size="sm"
               aria-label="分析結果をエクスポート"
-              disabled={busyKey !== null}
+              disabled={busyKey !== null || disabledByAnalysis}
             />
           }
         >
@@ -177,6 +183,11 @@ export function ExportMenu({ videoId, className }: ExportMenuProps) {
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
+      {disabledByAnalysis ? (
+        <p className="text-xs text-muted-foreground">
+          フィルター更新中はエクスポートできません
+        </p>
+      ) : null}
       {feedback ? (
         <p
           role="status"

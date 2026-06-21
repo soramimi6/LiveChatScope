@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { GlobalFilterBar } from "@/components/global-filter-bar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DisclaimerFooter } from "@/components/disclaimer-footer";
@@ -14,7 +15,12 @@ import { RevenueTab } from "@/components/tabs/revenue-tab";
 import { SearchTab } from "@/components/tabs/search-tab";
 import { SummaryTab } from "@/components/tabs/summary-tab";
 import { TopicsTab } from "@/components/tabs/topics-tab";
-import { getVideo, type VideoMetaResponse } from "@/lib/api";
+import {
+  DEFAULT_DISPLAY_FILTER,
+  getVideo,
+  type DisplayFilter,
+  type VideoMetaResponse,
+} from "@/lib/api";
 import { formatSeconds } from "@/lib/format";
 
 const TABS = [
@@ -28,6 +34,10 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
+function resolveDisplayFilter(meta: VideoMetaResponse | null): DisplayFilter {
+  return meta?.display_filter ?? DEFAULT_DISPLAY_FILTER;
+}
+
 export function VideoDashboard() {
   const params = useParams<{ videoId: string }>();
   const router = useRouter();
@@ -35,10 +45,45 @@ export function VideoDashboard() {
   const videoId = params.videoId;
   const activeTab = (searchParams.get("tab") as TabId) || "summary";
   const [meta, setMeta] = useState<VideoMetaResponse | null>(null);
+  const [displayFilter, setDisplayFilter] = useState<DisplayFilter>(
+    DEFAULT_DISPLAY_FILTER,
+  );
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const refreshMeta = useCallback(() => {
+    getVideo(videoId)
+      .then((data) => {
+        setMeta(data);
+        setDisplayFilter(resolveDisplayFilter(data));
+      })
+      .catch(() => setMeta(null));
+  }, [videoId]);
 
   useEffect(() => {
-    getVideo(videoId).then(setMeta).catch(() => setMeta(null));
-  }, [videoId]);
+    refreshMeta();
+  }, [refreshMeta]);
+
+  useEffect(() => {
+    if (meta?.analysis_status !== "running") return;
+
+    const id = setInterval(refreshMeta, 2000);
+    return () => clearInterval(id);
+  }, [meta?.analysis_status, refreshMeta]);
+
+  const handleRefilterStart = useCallback(() => {
+    setMeta((current) =>
+      current ? { ...current, analysis_status: "running" } : current,
+    );
+  }, []);
+
+  const handleRefilterComplete = useCallback(
+    (filter: DisplayFilter) => {
+      setDisplayFilter(filter);
+      setRefreshKey((key) => key + 1);
+      refreshMeta();
+    },
+    [refreshMeta],
+  );
 
   const headerSubtitle = [
     meta?.channel_name,
@@ -46,6 +91,9 @@ export function VideoDashboard() {
   ]
     .filter(Boolean)
     .join(" · ") || undefined;
+
+  const analysisStatus = meta?.analysis_status ?? "unknown";
+  const isRefilterRunning = analysisStatus === "running";
 
   return (
     <div className="flex min-h-full flex-col">
@@ -61,11 +109,19 @@ export function VideoDashboard() {
             {meta?.analysis_status === "partial" ? (
               <PartialAnalysisBadge />
             ) : (
-              <Badge variant="outline">分析: {meta?.analysis_status ?? "—"}</Badge>
+              <Badge variant="outline">分析: {analysisStatus}</Badge>
             )}
           </div>
-          <ExportMenu videoId={videoId} />
+          <ExportMenu videoId={videoId} analysisStatus={analysisStatus} />
         </div>
+
+        <GlobalFilterBar
+          videoId={videoId}
+          initialFilter={displayFilter}
+          analysisStatus={analysisStatus}
+          onRefilterStart={handleRefilterStart}
+          onRefilterComplete={handleRefilterComplete}
+        />
 
         <Tabs
           value={activeTab}
@@ -80,10 +136,18 @@ export function VideoDashboard() {
           </TabsList>
 
           <TabsContent value="summary">
-            <SummaryTab videoId={videoId} durationSeconds={meta?.duration_seconds} />
+            <SummaryTab
+              videoId={videoId}
+              durationSeconds={meta?.duration_seconds}
+              refreshKey={refreshKey}
+            />
           </TabsContent>
           <TabsContent value="topics">
-            <TopicsTab videoId={videoId} durationSeconds={meta?.duration_seconds} />
+            <TopicsTab
+              videoId={videoId}
+              durationSeconds={meta?.duration_seconds}
+              refreshKey={refreshKey}
+            />
           </TabsContent>
           <TabsContent value="highlights">
             <HighlightsTab videoId={videoId} />
@@ -92,7 +156,7 @@ export function VideoDashboard() {
             <RevenueTab videoId={videoId} />
           </TabsContent>
           <TabsContent value="community">
-            <CommunityTab videoId={videoId} />
+            <CommunityTab videoId={videoId} refreshKey={refreshKey} />
           </TabsContent>
           <TabsContent value="search">
             <SearchTab videoId={videoId} />
