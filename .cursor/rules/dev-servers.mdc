@@ -1,0 +1,18 @@
+---
+description: Start backend and frontend dev servers when doing local development
+alwaysApply: true
+---
+
+# Dev server startup
+
+When beginning local development, testing, or debugging for this project:
+
+1. Check whether ports **8000** (backend) and **3001** (frontend) are listening.
+2. If not running, start them in **background shells** (do not duplicate):
+   - Backend: `cd backend; .\.venv\Scripts\Activate.ps1; uvicorn app.main:app --reload --port 8000`
+   - Frontend: `cd frontend; npm run dev -- -p 3001`
+3. Confirm with `http://localhost:8000/health` and `http://localhost:3001`.
+4. Frontend API base: `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000` (see `frontend/.env.local`).
+5. Before `pip install` in backend, stop uvicorn or restart without `--reload` to avoid `.venv` reload loops.
+
+Alternative one-shot: `.\scripts\dev.ps1`

@@ -25,6 +25,13 @@ export default function HomePage() {
       router.push(`/analyze/${res.video_id}`);
     } catch (err) {
       if (err instanceof ApiError) {
+        if (err.code === "ALREADY_PROCESSING") {
+          const match = url.trim().match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+          if (match?.[1]) {
+            router.push(`/analyze/${match[1]}`);
+            return;
+          }
+        }
         setError(err.message);
       } else {
         setError("分析の開始に失敗しました。API サーバーが起動しているか確認してください。");

@@ -1,0 +1,37 @@
+---
+description: Run #6 topic keyword tuning loops; human approves adoption only
+alwaysApply: false
+globs: backend/config/analysis_defaults.json,backend/config/stopwords_ja_chat.txt,backend/app/services/analysis/stage4.py,backend/app/services/analysis/stage5.py
+---
+
+# #6 話題キーワード反復チューニング（Cursor 主体）
+
+## 役割分担
+
+| 担当 | 作業 |
+|------|------|
+| **Cursor** | パラメータ1項目変更 → 再分析 → 定量評価 → 比較レポート作成 |
+| **人間** | レポート確認 → 採用 / 却下 / 次パラメータ指示のみ |
+
+## 1ループ手順（Cursor が自律実行）
+
+1. 基準配信 ID を確認（短文: `8ZaCtuVdWYc` 級、長文: `uP51LV8d7mw` 級）
+2. **Before 保存** — `python scripts/evaluate_topic_labels.py --video-id <ID> --output docs/test-runs/tuning/<ID>-before.json`
+3. **1パラメータのみ変更** — `analysis_defaults.json` or `stopwords_ja_chat.txt` or Stage5 ロジック
+4. **再分析** — 対象動画の pipeline 再実行（refilter では Stage4 以前は走らない）
+5. **After 評価** — `python scripts/evaluate_topic_labels.py --video-id <ID> --baseline .../before.json --output .../after.json`
+6. **回帰** — `pytest tests/ -q`（ユニット）
+7. **人間へ報告** — short_token_rate / avg_token_length / comparison.improved / ラベル一覧。採用判断は人間のみ
+
+## 変更候補の優先順
+
+1. `global.min_token_length`（2→3→4）
+2. `stage4.keyword_min_doc_count`
+3. `stopwords_ja_chat.txt`
+4. Stage5 代表語選定（`top_k`、記号-only 除外）
+
+## 禁止
+
+- 複数パラメータの同時変更
+- 人間承認なしの `analysis_defaults.json` 本番反映
+- #5 ブレスト・実装（#8/#4/#2/#7/#3 完了後）
