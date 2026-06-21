@@ -61,7 +61,8 @@ function TimelineTooltip({ active, payload, blocks }: TimelineTooltipProps) {
         {formatSeconds(block.start_sec)} – {formatSeconds(block.end_sec)}
       </p>
       <p className="text-muted-foreground">
-        {block.message_count.toLocaleString()} 件 / UC {block.unique_authors.toLocaleString()}
+        {block.message_count.toLocaleString()} 件 / ユニーク投稿者{" "}
+        {block.unique_authors.toLocaleString()}
       </p>
     </div>
   );

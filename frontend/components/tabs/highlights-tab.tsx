@@ -77,6 +77,13 @@ function HighlightsList({ items }: { items: HighlightItem[] }) {
             </p>
             <p className="text-xs text-muted-foreground">
               スコア {item.score.toFixed(1)}
+              <span
+                className="ml-1 inline-flex align-middle text-muted-foreground"
+                title="スコア = その時刻のコメント密度 ÷ 移動平均（約5分窓）。1.0 は平均並み、1.5 以上で候補に採用。"
+                aria-label="スコアの見方"
+              >
+                <Info className="size-3.5" />
+              </span>
             </p>
             <p className="text-xs text-muted-foreground">
               切り抜き範囲（±30秒）: {formatSeconds(item.clip_start_sec)} –{" "}

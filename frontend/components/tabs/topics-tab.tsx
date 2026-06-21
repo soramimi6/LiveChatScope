@@ -62,7 +62,7 @@ function TopicBlocksTable({
             <th className="px-3 py-2 font-medium">開始 – 終了</th>
             <th className="px-3 py-2 font-medium">推定ラベル</th>
             <th className="px-3 py-2 font-medium tabular-nums">コメント</th>
-            <th className="px-3 py-2 font-medium tabular-nums">UC</th>
+            <th className="px-3 py-2 font-medium tabular-nums">ユニーク投稿者</th>
             <th className="px-3 py-2 font-medium">スパチャ</th>
             <th className="px-3 py-2 font-medium">ジャンプ</th>
           </tr>

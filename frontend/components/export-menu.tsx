@@ -54,7 +54,7 @@ const EXPORT_OPTIONS: ExportOption[] = [
 ];
 
 function actionLabel(option: ExportOption, action: ExportAction): string {
-  const verb = action === "download" ? "ダウンロード" : "クリップボードにコピー";
+  const verb = action === "download" ? "DL" : "コピー";
   return `${option.label}を${verb}`;
 }
 

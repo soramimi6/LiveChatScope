@@ -8,9 +8,19 @@ from app.api.common import (
     require_analysis_ready,
     utc_now_iso,
 )
+from app.services.analysis.params import load_analysis_defaults
 from app.db import get_connection
 
 router = APIRouter(prefix="/videos", tags=["analysis"])
+
+
+def _summary_preview_limits() -> tuple[int, int, int]:
+    stage7 = load_analysis_defaults().get("stage7", {})
+    return (
+        int(stage7.get("summary_highlights_n", 5)),
+        int(stage7.get("summary_keywords_n", 10)),
+        int(stage7.get("summary_topic_preview_n", 6)),
+    )
 
 
 def _count_unique_authors(conn, video_id: str) -> int:
@@ -78,6 +88,7 @@ def get_summary(video_id: str):
         topic_block_count = 0
 
         if is_analysis_complete(row["analysis_status"]):
+            highlights_n, keywords_n, topics_n = _summary_preview_limits()
             top_highlights = [
                 {
                     "rank": hl["rank"],
@@ -92,9 +103,9 @@ def get_summary(video_id: str):
                     FROM highlights
                     WHERE video_id = ?
                     ORDER BY rank ASC
-                    LIMIT 5
+                    LIMIT ?
                     """,
-                    (video_id,),
+                    (video_id, highlights_n),
                 ).fetchall()
             ]
 
@@ -110,9 +121,9 @@ def get_summary(video_id: str):
                     FROM keyword_stats
                     WHERE video_id = ?
                     ORDER BY rank ASC
-                    LIMIT 5
+                    LIMIT ?
                     """,
-                    (video_id,),
+                    (video_id, keywords_n),
                 ).fetchall()
             ]
 
@@ -123,9 +134,9 @@ def get_summary(video_id: str):
                 FROM topic_blocks
                 WHERE video_id = ?
                 ORDER BY block_index ASC
-                LIMIT 5
+                LIMIT ?
                 """,
-                (video_id,),
+                (video_id, topics_n),
             ).fetchall()
             topic_block_count = conn.execute(
                 "SELECT COUNT(*) AS cnt FROM topic_blocks WHERE video_id = ?",
