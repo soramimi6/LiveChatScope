@@ -1,8 +1,8 @@
 # LiveChatScope — 作業引き継ぎ（現在地スナップショット）
 
-> **更新日**: 2026-06-21  
+> **更新日**: 2026-06-21（再整理）  
 > **目的**: 別 PC へ移行して開発を継続するための状態記録  
-> **統合ブランチ**: `dev`（`origin/dev` と同期済み想定）
+> **統合ブランチ**: `dev`（日常作業はここ。`origin/dev` と同期すること）
 
 ---
 
@@ -11,10 +11,12 @@
 | 項目 | 値 |
 |------|-----|
 | GitHub | https://github.com/soramimi6/LiveChatScope |
-| 作業ディレクトリ（旧 PC） | `c:\Users\soram\OneDrive\Documents\LiveChatScope` |
 | 統合ブランチ | `dev` |
-| リリースブランチ | `master`（第一弾完成時のみ merge） |
-| 最新 `dev` commit | `759b950` — test: extend E2E-01, fix markdown export API, add perf tests |
+| リリースブランチ | `master`（第一弾完成版） |
+| 最新 `master` commit | `0335f0e` — docs: mark first release complete on master |
+| 最新 `dev` commit | `ebd56cd` — docs: Q8確定（UX-24広い再実行・正確性最優先） |
+
+**ブランチの関係**: 第一弾実装は `master` にマージ済み。`dev` はその後 **UX 改修メモ整備 + エクスポートファイル名（UX-21）** が追加され、`master` より **10 commit 先行**。
 
 ### 別 PC での開始手順
 
@@ -37,11 +39,11 @@ git pull origin dev
 | Frontend 実装 | **完了**（W5, W-F1/W6, W7〜W11, W12 ExportMenu） |
 | E2E 統合 | **完了**（スモーク + フルフロー PASS — §6） |
 | 性能テスト | **2k 規模 PASS**（P-02〜P-05）。50k+ P-01 は Phase B |
-| `dev` → `master` | **ready**（マージ待ち） |
+| `dev` → `master` | **完了**（`master` @ `0335f0e`） |
 
 ---
 
-## 3. 実装タスク完了一覧
+## 3. 実装タスク完了一覧（第一弾）
 
 | ID | ブランチ | 内容 | dev マージ |
 |:--:|----------|------|:----------:|
@@ -59,7 +61,12 @@ git pull origin dev
 | W12 | `feat/frontend-export` | ExportMenu | ✅ |
 | E2E | `feat/e2e-api-tests` | pytest スモーク + フロー + runbook | ✅ |
 
-ローカルに残る作業ブランチ（マージ済み・削除任意）: 上表の `feat/*` 一式。
+### 第一弾完成後の `dev` 追加作業（master 未反映）
+
+| ID / 種別 | commit 例 | 内容 | 状態 |
+|-----------|-----------|------|------|
+| UX-21 | `f6eaa6b` | エクスポート DL 名を `LiveChatScope_Result_{videoId}.*` に統一 | ✅ 実装済（`dev` のみ） |
+| UX メモ | `4210455`〜`ebd56cd` | [ux-improvement-memo.md](ux-improvement-memo.md) — 実画面 feedback + コード照合 + Q1–Q8 方針決定 | 📋 メモのみ（UX-21 除く） |
 
 ---
 
@@ -75,13 +82,14 @@ app/
     analysis.py        # summary, density, highlights, topics, ...
     messages_api.py    # GET /messages（FTS5）
     export.py          # GET /export/{type}
+    export_names.py    # UX-21: LiveChatScope_Result_* ファイル名（dev のみ）
     common.py          # jump_url, time_text, 409 制御
   services/
     fetch_worker.py    # chat-downloader 取得
     analysis/          # pipeline.py, stage0–8, params.py, utils.py
 db/schema.sql
 config/analysis_defaults.json
-tests/                 # test_e2e_smoke.py, test_e2e_flow.py, conftest.py
+tests/                 # test_e2e_smoke.py, test_e2e_flow.py, test_export_names.py, ...
 ```
 
 ### Frontend（`frontend/`）
@@ -95,6 +103,7 @@ components/
 lib/
   api.ts               # コア API（videos, summary）
   api/highlights.ts, revenue.ts, community.ts, search.ts, export.ts
+  export-filename.ts   # UX-21: クライアント側 DL 名（dev のみ）
   mocks/               # summary, topics, highlights, revenue, ...
 ```
 
@@ -104,9 +113,10 @@ lib/
 
 | 項目 | 方針 |
 |------|------|
-| タスク実行 | **Cursor メインチャット → Task サブエージェント**（手動別 Agent 起動は廃止） |
+| タスク実行 | **Cursor メインチャット → Task サブエージェント** |
 | グローバルルール | `~/.cursor/rules/multi-agent-development.mdc` |
 | プロジェクト手順 | [development-process.md](development-process.md) |
+| UX 改修 backlog | [ux-improvement-memo.md](ux-improvement-memo.md) — **明示指示があるまで実装しない**（UX-21 完了済み） |
 | マージ | サブエージェントは commit のみ。マネージャーが `dev` に merge |
 
 ---
@@ -120,6 +130,7 @@ lib/
 | `test_e2e_smoke.py`（2件） | — | ✅ PASS |
 | `test_e2e_flow.py`（フルフロー） | `8ZaCtuVdWYc` | ✅ PASS |
 | `test_perf_api.py`（P-02〜P-06） | `8ZaCtuVdWYc` | ✅ PASS（2k 規模） |
+| `test_export_names.py` | — | ✅ PASS（`dev` — UX-21） |
 
 **実行コマンド**:
 
@@ -164,17 +175,15 @@ cd LiveChatScope
 
 ---
 
-## 7. 開発環境（旧 PC で構築済み）
+## 7. 開発環境
 
 ### 7.1 必要ソフト
 
-| ソフト | バージョン（旧 PC） | 備考 |
-|--------|---------------------|------|
-| Python | 3.12.10 | `C:\Users\soram\AppData\Local\Programs\Python\Python312\python.exe` |
-| Node.js | v24.14.0 | |
-| Git / gh | 利用可（`soramimi6`） | |
-
-**注意**: Windows Store の `python` スタブのみだと動かない。別 PC では Python 3.11+ を PATH 通しでインストールすること。
+| ソフト | 要件 |
+|--------|------|
+| Python | 3.11+（Windows Store スタブ不可） |
+| Node.js | LTS 推奨 |
+| Git | — |
 
 ### 7.2 Backend セットアップ
 
@@ -200,7 +209,7 @@ npm run dev
 ```
 
 - http://localhost:3000
-- `npm run build` — 旧 PC で成功確認済み
+- `npm run build` — 成功確認済み
 
 ### 7.4 `.venv` / `node_modules`
 
@@ -213,8 +222,10 @@ npm run dev
 | 項目 | 状態 |
 |------|------|
 | 話題タブ: キーワード時間帯ヒートマップ | 第二優先・**未実装** |
-| chat-downloader | [Indigo128 fork](https://github.com/Indigo128/chat-downloader) 固定。YouTube 仕様変更で取得失敗しうる（[test-acceptance §8](test-acceptance.md)） |
-| 50k+ 性能検証 | **未実施** — P-01 は ~2k msg で ~15s のみ確認。10 万コメント級は Phase B |
+| UX 改修 UX-01〜27（UX-21 除く） | メモ・方針決定のみ — [ux-improvement-memo.md](ux-improvement-memo.md) |
+| 設計 vs 実装の差分 | 同上 §2（partial 未使用、動画メタ未保存、summary LIMIT 5 固定 等） |
+| chat-downloader | [Indigo128 fork](https://github.com/Indigo128/chat-downloader) 固定。YouTube 仕様変更で取得失敗しうる |
+| 50k+ 性能検証 | **未実施** — P-01 は ~2k msg で ~15s のみ確認。Phase B |
 | 認証・本番デプロイ | POC スコープ外 |
 | 英語 UI | 第一弾対象外 |
 
@@ -224,14 +235,14 @@ npm run dev
 
 | ファイル | 用途 |
 |----------|------|
-| [phase-1-checklist.md](phase-1-checklist.md) | 進捗チェックリスト |
+| [phase-1-checklist.md](phase-1-checklist.md) | 第一弾進捗チェックリスト |
+| [ux-improvement-memo.md](ux-improvement-memo.md) | **UI/UX 改修メモ**（Q1–Q8 方針決定・backlog） |
 | [development-process.md](development-process.md) | ブランチ・Task 割当 |
 | [test-acceptance.md](test-acceptance.md) | 受入基準・第一弾完成定義 |
 | [e2e-runbook.md](e2e-runbook.md) | E2E-01 手動手順 |
 | [architecture.md](architecture.md) | Pipeline Stage 0–8 |
 | [api-spec.md](api-spec.md) | REST API |
 | [ui-spec.md](ui-spec.md) | 全タブ UI |
-| [ux-improvement-memo.md](ux-improvement-memo.md) | **UI/UX 改修メモ**（実画面フィードバック） |
 
 ---
 
@@ -242,22 +253,45 @@ npm run dev
 - [ ] Node.js インストール
 - [ ] `backend/.venv` 作成 + `pip install -r requirements.txt -r requirements-dev.txt`
 - [ ] `frontend/npm install` + `.env.local`
-- [ ] Cursor グローバルルール `multi-agent-development.mdc` を同期（Cursor 設定 or 手動コピー）
+- [ ] Cursor グローバルルール `multi-agent-development.mdc` を同期
 - [ ] Backend / Frontend 起動確認
-- [x] E2E 自動テスト PASS（`8ZaCtuVdWYc` — `./scripts/e2e-api.sh` または `e2e-api.ps1`）
+- [x] E2E 自動テスト PASS（`8ZaCtuVdWYc`）
 - [x] 性能テスト PASS（2k 規模 — `test_perf_api.py`）
-- [ ] `dev` → `master` マージ（第一弾完成）
-- [ ] 本ファイルを読んで「§11」から Phase B へ
+- [x] `dev` → `master` マージ（第一弾完成 — `master` @ `0335f0e`）
+- [ ] 本ファイル + [ux-improvement-memo.md](ux-improvement-memo.md) を読んで §11 から着手
 
 ---
 
-## 11. 推奨次タスク（第一弾完成後 → Phase B）
+## 11. 推奨次タスク（現在地 → Phase B + UX polish）
 
-1. **`dev` → `master` マージ** — 第一弾完成リリース
-2. **50k+ 性能テスト** — 5万〜10万コメント配信で P-01 検証（test-acceptance §6）
-3. **chat-downloader 監視** — Indigo128 fork の upstream 追従・取得失敗時のフォールバック
-4. **Phase B 着手** — 中断再開・本番品質（[overview.md](overview.md)）
-5. **任意**: 話題タブヒートマップ、UI polish、手動ブラウザ E2E-01
+**日常作業は `dev` ブランチで行う。** `master` は第一弾スナップショット。
+
+### 優先度 A — UX 改修（方針決定済み・実装待ち）
+
+[ux-improvement-memo.md](ux-improvement-memo.md) §1, §5 参照。
+
+| 順 | 内容 | 関連 |
+|:--:|------|------|
+| 1 | Quick win 群（UX-02, 04, 08, 13, 22, 27 等） | 文言・表示数・リンク |
+| 2 | エクスポート説明 UI（UX-23 / Q2） | JSON=分析一式、CSV=チャットログ |
+| 3 | グローバル表示フィルター（UX-24 / Q1,Q7,Q8） | ハイブリッド + Stage 4–8 広い再実行 + 更新中 UI |
+| 4 | 差別化 Must 暫定（UX-25 / Q3） | D2 SC×話題、B1 キーワードバースト、C1 常連コア層 |
+| 5 | ヘッダ・ロゴ（UX-26 / Q4） | 信頼感・製品感 |
+
+### 優先度 B — Phase B（本番品質）
+
+| 順 | 内容 |
+|:--:|------|
+| 1 | **50k+ 性能テスト** — P-01 検証（[test-acceptance.md §6](test-acceptance.md)） |
+| 2 | **chat-downloader 監視** — fork upstream 追従・取得失敗フォールバック |
+| 3 | **中断再開・エラーハンドリング強化** |
+| 4 | **`dev` → `master` 再マージ** — UX/Phase B の区切りごと |
+
+### 任意
+
+- 話題タブヒートマップ（第一弾から未実装）
+- 手動ブラウザ E2E-01
+- Playwright E2E（Phase B 推奨）
 
 ---
 
@@ -265,4 +299,6 @@ npm run dev
 
 - ユーザー確認: 仕様トレードオフはマネージャーがエスカレーション
 - W4 確定方針: 分析未完了 → 409 `ANALYSIS_NOT_READY`；messages は fetch 完了後 200
-- 第一弾 UI: 日本語のみ、ダーク基調、mock fallback あり（API 未接続時も画面表示可）
+- 第一弾 UI: 日本語のみ、ダーク基調、mock fallback あり
+- UX メモ運用: **明示指示があるまで実装しない**（UX-21 のみ例外で完了）
+- Q1–Q8 方針決定済み（2026-06-21）— 実装前に [ux-improvement-memo.md §1](ux-improvement-memo.md) を確認
