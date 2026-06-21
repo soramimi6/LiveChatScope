@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Filter, Loader2, Plus, X } from "lucide-react";
+import { ChevronDown, Filter, Loader2, Plus, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -73,6 +73,7 @@ export function GlobalFilterBar({
   onRefilterStart,
   className,
 }: GlobalFilterBarProps) {
+  const [expanded, setExpanded] = useState(false);
   const [filter, setFilter] = useState(() =>
     mergeSessionFilter(videoId, initialFilter),
   );
@@ -250,10 +251,19 @@ export function GlobalFilterBar({
   return (
     <section
       aria-label="表示フィルター"
-      className={cn("mb-6 space-y-4 rounded-xl border bg-card p-4", className)}
+      className={cn(
+        "mb-6 rounded-xl border bg-card",
+        expanded ? "space-y-4 p-4" : "p-3",
+        className,
+      )}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
+      <button
+        type="button"
+        className="flex w-full items-start justify-between gap-3 text-left"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((value) => !value)}
+      >
+        <div className="min-w-0 flex-1 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-sm font-medium">表示フィルター</h2>
             {filterActive ? (
@@ -266,13 +276,32 @@ export function GlobalFilterBar({
                 フィルター適用中
               </Badge>
             ) : null}
+            {updating ? (
+              <Badge variant="outline" className="gap-1">
+                <Loader2 className="size-3 animate-spin" />
+                反映中
+              </Badge>
+            ) : null}
           </div>
           <p className="text-xs text-muted-foreground">
-            話題・キーワード・エクスポートに反映されます。密度グラフ・盛り上がり候補は全メッセージのまま表示されます。
+            {expanded
+              ? "話題・キーワード・エクスポートに反映されます。密度グラフ・盛り上がり候補は全メッセージのまま表示されます。"
+              : filterActive
+                ? filterTooltip(filter)
+                : "クリックして NG キーワード・除外ユーザーなどを設定"}
           </p>
         </div>
-      </div>
+        <ChevronDown
+          className={cn(
+            "mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform",
+            expanded && "rotate-180",
+          )}
+          aria-hidden
+        />
+      </button>
 
+      {expanded ? (
+        <>
       <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:gap-8">
         <label className="flex cursor-pointer items-start gap-3">
           <Switch
@@ -442,6 +471,14 @@ export function GlobalFilterBar({
 
       {error ? (
         <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+        </>
+      ) : null}
+
+      {!expanded && error ? (
+        <Alert variant="destructive" className="mt-3">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
