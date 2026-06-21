@@ -285,6 +285,56 @@
 | **新** | `LiveChatScope_Result_{video_id}.json`, `.csv`, `_summary.md`, `_clips.md`, `_thanks.md` |
 | **実装** | `backend/app/api/export_names.py`, `frontend/lib/export-filename.ts`, `export.py`, `export.ts`, `revenue-tab.tsx` |
 
+### UX-22: エクスポートメニュー表記の簡素化
+
+| 項目 | 内容 |
+|------|------|
+| **要望** | ドロップダウンが冗長。「ダウンロード」→ **「DL」**、「クリップボードにコピー」→ **「コピー」** など短い表記に |
+| **現状** | `export-menu.tsx` の `actionLabel()` が `{ラベル}をダウンロード` / `{ラベル}をクリップボードにコピー` を各形式×2アクションで計 10 行表示 |
+| **案** | 例: `JSON · DL` / `JSON · コピー`。グループ見出し（データ / Markdown）で形式を示し、動詞は短縮。収益タブのボタン文言も揃えるか要検討 |
+| **触るファイル** | `frontend/components/export-menu.tsx`（`revenue-tab.tsx` は別途要否判断） |
+| **優先** | Quick win |
+
+### UX-23: JSON / CSV の出力情報種別を統一（最小公倍数マージ）
+
+| 項目 | 内容 |
+|------|------|
+| **要望** | JSON と CSV で **出せる情報の種類を同じ** にしたい。現状それぞれの内容の **最小公倍数（和集合）** としてマージ |
+| **現状（JSON）** | 動画メタ、`density[]`、`authors[]`（全件）、`super_chats[]`。**messages なし** |
+| **現状（CSV）** | 全 messages の 6 列（`time_in_seconds`, `time_text`, `author_name`, `message_type`, `text`, `jump_url`）。集約データなし |
+| **統一後に含める情報種別（案）** | ① 動画メタ ② 密度バケット ③ 投稿者ランキング ④ スパチャ一覧 ⑤ 全メッセージ行 |
+| **形式ごとの載せ方（要設計）** | **JSON**: 上記を 1 オブジェクトにネスト（`messages[]` を追加）。**CSV**: メッセージを主 CSV とし、メタ・集約は先頭コメント行、`# section` 区切り、または ZIP 同梱の複数 CSV — 単一 CSV への無理な押し込みは避ける |
+| **関連ギャップ** | FR-5「JSON 生データ」「CSV 分析列含む」、A-F5-01「messages 含む」と現実装が不一致。本改修で JSON 側は解消方向 |
+| **触るファイル** | `backend/app/api/export.py`, `backend/tests/test_e2e_flow.py`, `docs/requirements.md` / `test-acceptance.md`（期待値更新） |
+| **関連** | 下記「エクスポート内容精査メモ」、UX-24（フィルター ON 時はエクスポートにも反映） |
+
+#### エクスポート内容精査メモ（2026-06-21 調査・未実装）
+
+| 形式 | 主な出力 | DB にあるが未出力の例 |
+|------|----------|----------------------|
+| JSON | メタ・密度・authors・SC | messages, highlights, topics, keywords, stream_summary, UC |
+| CSV | messages 6 列 | author_id, SC 金額列, 集約テーブル |
+| markdown-summary（API） | ピーク・SC 合計 | キーワード・話題（**stage8 キャッシュ版にはあり、API 版になし** — 二重実装） |
+| markdown-clips | highlights 全件 | 低活動区間 |
+| markdown-thanks | SC 一覧 + 固定テンプレ | jump_url（収益タブ fallback のみあり） |
+
+**削減候補（別チケット）**: Markdown 内 `analysis_status`、stage8 の「stream_summary キャッシュ済み」注記、thanks 固定テンプレの任意化。
+
+### UX-24: サマリー画面のグローバル表示フィルター（NG キーワード / スタンプのみ除外）
+
+| 項目 | 内容 |
+|------|------|
+| **要望** | サマリー画面に **切り替えスイッチ** を追加。「**NG キーワードを除外する**: ON/OFF」「**スタンプのみの発言を除外する**: ON/OFF」等。解析・結果表示・**エクスポート** に反映される **グローバル指定** |
+| **現状** | フィルター UI なし。除外は `stopwords_ja_chat.txt`（解析時固定）のみ。密度・盛り上がりは全メッセージ、話題は Janome + ストップワード（UX-06） |
+| **案（UI）** | サマリータブ上部（またはダッシュボード共通バー）に Switch 2 本 + 状態バッジ「フィルター適用中」。Switch コンポーネントは **未導入**（新規追加 or Checkbox で代用） |
+| **案（スコープ — 要ユーザー確認）** | **A. 表示のみ**: API クエリパラメータで都度集計（72k 規模は負荷注意）。**B. 解析再実行**: トグル変更で Pipeline 再走（正確だが重い）。**C. ハイブリッド**: 密度は全件、話題・キーワード・エクスポート messages のみフィルター（UX-06 の `all` / `text_only` と整合） |
+| **NG キーワード** | UX-19 の除外ワードと統合。第一弾は **セッション / video 単位** のカンマ区切り入力 + localStorage。ON 時は `stopwords` に加算 |
+| **スタンプのみ除外** | テキストがスタンプパターンのみの行を除外（`:xxx:` / チャンネル絵文字名等）。`stamp_patterns.txt` または正規表現設定（UX-06 参照） |
+| **反映先** | サマリー KPI・キーワード・話題、話題/盛り上がり/コミュニティ/検索タブ、JSON/CSV エクスポート（UX-23 と連動） |
+| **触るファイル** | `summary-tab.tsx`, `video-dashboard.tsx`（Context で全タブ共有）, 新規 `view-filters` API または query params 全 API 拡張, `export.py`, `stage1.py`〜`stage5.py`（再解析時）, `analysis_defaults.json` |
+| **関連** | UX-06, UX-11, UX-19, UX-20, UX-23 |
+| **注意** | **明示指示があるまで実装しない**（改善メモ段階） |
+
 ---
 
 ## 変更履歴
@@ -294,3 +344,4 @@
 | 2026-06-21 | 初版（進捗画面 UX-01〜03） |
 | 2026-06-21 | 結果画面 feedback 一括追加（UX-04〜20）、UC FAQ |
 | 2026-06-21 | **UX-21 完了**: エクスポートファイル名を `LiveChatScope_Result_{video_id}_*` 形式に統一 |
+| 2026-06-21 | エクスポート精査メモ、UX-22（メニュー表記）、UX-23（JSON/CSV 統一）、UX-24（グローバルフィルター）を追記 — **未実装** |
