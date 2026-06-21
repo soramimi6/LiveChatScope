@@ -16,6 +16,8 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
+`chat-downloader` は YouTube 互換のため [Indigo128 fork](https://github.com/Indigo128/chat-downloader) を利用しています。
+
 ## 起動
 
 ```powershell

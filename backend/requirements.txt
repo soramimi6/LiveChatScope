@@ -2,5 +2,5 @@ fastapi>=0.115.0
 uvicorn[standard]>=0.32.0
 pydantic>=2.0
 pydantic-settings>=2.0
-chat-downloader>=0.2.8
+chat-downloader @ git+https://github.com/Indigo128/chat-downloader
 janome>=0.5.0
