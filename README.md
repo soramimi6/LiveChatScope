@@ -2,111 +2,58 @@
 
 YouTube ライブ配信のチャットリプレイを取得・分析し、配信後の振り返りと任意時刻へのジャンプを支援する Web ツール。
 
-## 概要
+## ステータス
 
-- **対象**: ライブチャット（コメント欄ではない）
-- **主ターゲット**: 個人配信者（配信後の改善・スパチャお礼・切り抜き候補）
-- **主用途**: 配信終了後、URL からチャットリプレイを取得し、話題俯瞰・盛り上がり分析（Phase A / A+）
-- **将来**: 安定稼働後に公開サービスを検討（Phase D）
-
-## 主な機能（予定）
-
-1. URL 入力によるチャットリプレイ取得
-2. 検索・フィルタ・時系列分析
-3. コメント密度・スパイク検出・投稿者ランキング等
-4. `watch?v=...&t=...s` 形式での任意時刻ジャンプリンク生成
-5. JSON / CSV エクスポート
-
-## ドキュメント
-
-一覧: **[docs/README.md](docs/README.md)**
-
-| ファイル | 内容 |
+| ブランチ | 内容 |
 |----------|------|
-| [docs/引き継ぎ.md](docs/引き継ぎ.md) | **作業引き継ぎ・現在地**（別 PC 移行用） |
-| [docs/UX改修.md](docs/UX改修.md) | UI/UX 改修メモ（Q1–Q8 方針決定） |
-| [docs/第一弾チェックリスト.md](docs/第一弾チェックリスト.md) | 第一弾進捗 |
-| [docs/開発プロセス.md](docs/開発プロセス.md) | ブランチ戦略・Task 割当 |
-| [docs/概要.md](docs/概要.md) | プロダクト概要・フェーズ |
-| [docs/要件.md](docs/要件.md) | 要件定義 |
-| [docs/アーキテクチャ.md](docs/アーキテクチャ.md) | 技術アーキテクチャ・分析 Pipeline |
-| [docs/UI仕様.md](docs/UI仕様.md) | 画面仕様・UI 設計 |
-| [docs/API仕様.md](docs/API仕様.md) | API 詳細仕様（`/api/v1`） |
-| [docs/DBスキーマ.md](docs/DBスキーマ.md) | DB スキーマ・DDL |
-| [docs/分析パラメータ.md](docs/分析パラメータ.md) | 分析パラメータ既定値 |
-| [docs/テスト受入.md](docs/テスト受入.md) | テスト / 受入基準 |
-| [docs/E2E手順.md](docs/E2E手順.md) | E2E 手動テスト手順 |
+| `master` @ `0335f0e` | 第一弾（Phase A + A+） |
+| `dev` @ `0c862db` | Phase 0〜4 統合済。第二弾リリース待ち（[PR #17](https://github.com/soramimi6/LiveChatScope/pull/17)） |
 
-## 開発
+**次**: PR #17 マージ → Phase 5 / Phase B
 
-| ブランチ | 用途 |
-|----------|------|
-| `master` | 第一弾完成版 |
-| `dev` | 日常の統合ブランチ |
-
-### AI エージェントとのやり取り
-
-**原則 caveman モード（コンテキスト圧縮）** で進める。  
-実装タスクは **メインチャットが Task サブエージェントで実行**（別 Agent の手動起動・コピペ不要）。
-
-| レイヤ | 内容 |
-|--------|------|
-| **グローバル** | Cursor ルール `multi-agent-development.mdc` — マネージャー/ワーカー基本ルール（全プロジェクト） |
-| **プロジェクト** | [開発プロセス.md](docs/開発プロセス.md) — ブランチ・タスク ID・LiveChatScope 固有の指示例 |
-
-| 項目 | 方針 |
-|------|------|
-| 文体 | 短文・箇条書き・結論先出し |
-| 説明 | 必要最小限。冗長な前置き・総括・丁寧語の繰り返しは避ける |
-| 報告 | 変更点・結果・次アクションのみ |
-| 質問 | 選択肢付きで簡潔に |
-| 例外 | 設計判断・トレードオフ・ユーザー確認が必要な論点は、要点を残して詳述可 |
-
-実装・レビュー・タスク引き継ぎすべて、この方針を徹底する。
-
-### クイックスタート（POC）
-
-> 詳細・別 PC セットアップ: [引き継ぎ.md](docs/引き継ぎ.md) §7
+## クイックスタート
 
 ```powershell
-# Backend（Python 3.11+ — Windows Store スタブ不可）
 cd backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
+pip install -r requirements.txt -r requirements-dev.txt
 uvicorn app.main:app --reload --port 8000
 
-# Frontend（別ターミナル）
 cd frontend
 copy .env.example .env.local
 npm install
 npm run dev
 ```
 
-Linux / macOS では `source backend/.venv/bin/activate` で venv を有効化。E2E: `./scripts/e2e-api.sh "https://www.youtube.com/watch?v=VIDEO_ID"`
-
 - Frontend: http://localhost:3000
 - API: http://localhost:8000/docs
 
-## ステータス
+詳細: [docs/進捗.md](docs/進捗.md)
 
-✅ **第一弾完成** — Phase A + A+ プロトタイプ（`master` @ `0335f0e`）。E2E PASS（`8ZaCtuVdWYc`）、性能 P-02〜P-05 PASS（2k 規模）
+## ドキュメント
 
-**開発中（`dev`）**: UX 改修メモ整備 + エクスポートファイル名（UX-21）完了。`dev` @ `ebd56cd`  
-→ 次: UX polish（[UX改修.md](docs/UX改修.md)）+ Phase B。詳細: [引き継ぎ.md](docs/引き継ぎ.md)
+**入口**: [docs/README.md](docs/README.md)
+
+| 種別 | ファイル |
+|------|----------|
+| 進捗・環境 | [docs/進捗.md](docs/進捗.md) |
+| 設計 | [概要](docs/概要.md) / [要件](docs/要件.md) / [アーキテクチャ](docs/アーキテクチャ.md) |
+| 仕様 | [API](docs/API仕様.md) / [UI](docs/UI仕様.md) / [DB](docs/DBスキーマ.md) / [分析パラメータ](docs/分析パラメータ.md) |
+| テスト | [テスト受入](docs/テスト受入.md) |
+
+## 開発
+
+| ブランチ | 用途 |
+|----------|------|
+| `master` | リリース |
+| `dev` | 日常統合 |
+
+Task サブエージェント + Cursor グローバルルール `multi-agent-development.mdc`。詳細: [docs/進捗.md §4](docs/進捗.md)
 
 ## 既知の制限
 
-| 制限 | 説明 |
-|------|------|
-| 非公式取得 | [Indigo128/chat-downloader](https://github.com/Indigo128/chat-downloader) fork 固定。YouTube 仕様変更で突然動作しなくなる可能性 |
-| 推定話題 | 配信内容とチャット話題は一致しない場合がある |
-| 認証なし POC | 公開ネットワークへの無防備デプロイ不可 |
-| スマホ | 閲覧程度。最適化なし |
-| 英語 UI | 第一弾対象外 |
-| Analytics | 同時視聴者数等は提供しない |
-| 大規模性能 | 50k+ コメント規模の P-01（全パイプライン ≤30 分）は未検証。Phase B で実施 |
-
-（[テスト受入.md §8](docs/テスト受入.md) 要約 + fork 固定・性能未検証）
-
+- [Indigo128/chat-downloader](https://github.com/Indigo128/chat-downloader) fork 固定 — YouTube 仕様変更リスク
+- 推定話題は配信内容と一致しない場合あり
+- 50k+ 性能未検証（2k のみ PASS）
+- 認証なし POC / 日本語 UI のみ
