@@ -7,9 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { JumpLinkButton } from "@/components/jump-link-button";
+import { KeywordBurstRanking } from "@/components/keyword-burst-ranking";
 import { TopicTimelineBar } from "@/components/topic-timeline-bar";
 import {
+  getKeywordBurstsWithFallback,
   getTopicsTabDataWithFallback,
+  type KeywordBurstsResponse,
   type SuperChatTotal,
   type TopicBlock,
   type TopicTransition,
@@ -176,6 +179,7 @@ function KeywordsSection({ keywords }: { keywords: TopicsTabData["keywords"] }) 
 
 export function TopicsTab({ videoId, durationSeconds, refreshKey = 0 }: TopicsTabProps) {
   const [data, setData] = useState<TopicsTabData | null>(null);
+  const [bursts, setBursts] = useState<KeywordBurstsResponse | null>(null);
   const [isMock, setIsMock] = useState(false);
   const [loading, setLoading] = useState(true);
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
@@ -184,11 +188,12 @@ export function TopicsTab({ videoId, durationSeconds, refreshKey = 0 }: TopicsTa
     let cancelled = false;
     setLoading(true);
 
-    getTopicsTabDataWithFallback(videoId)
-      .then(({ data: tabData, isMock: mock }) => {
+    Promise.all([getTopicsTabDataWithFallback(videoId), getKeywordBurstsWithFallback(videoId)])
+      .then(([tabResult, burstResult]) => {
         if (!cancelled) {
-          setData(tabData);
-          setIsMock(mock);
+          setData(tabResult.data);
+          setBursts(burstResult.data);
+          setIsMock(tabResult.isMock || burstResult.isMock);
         }
       })
       .finally(() => {
@@ -282,6 +287,8 @@ export function TopicsTab({ videoId, durationSeconds, refreshKey = 0 }: TopicsTa
           <KeywordsSection keywords={data.keywords} />
         </CardContent>
       </Card>
+
+      {bursts ? <KeywordBurstRanking items={bursts.items} /> : null}
     </div>
   );
 }

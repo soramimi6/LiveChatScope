@@ -241,6 +241,41 @@ export function getKeywords(videoId: string, limit = 20) {
   );
 }
 
+export type KeywordBurst = {
+  rank: number;
+  token: string;
+  peak_bucket_start_sec: number;
+  time_text: string;
+  peak_count: number;
+  baseline_count: number;
+  burst_ratio: number;
+  jump_url: string;
+};
+
+export type KeywordBurstsResponse = {
+  video_id: string;
+  items: KeywordBurst[];
+};
+
+export function getKeywordBursts(videoId: string, limit = 10) {
+  return request<KeywordBurstsResponse>(
+    `/api/v1/videos/${videoId}/keywords/bursts?limit=${limit}`,
+  );
+}
+
+export async function getKeywordBurstsWithFallback(
+  videoId: string,
+  limit = 10,
+): Promise<{ data: KeywordBurstsResponse; isMock: boolean }> {
+  try {
+    const data = await getKeywordBursts(videoId, limit);
+    return { data, isMock: false };
+  } catch {
+    const { getMockKeywordBursts } = await import("@/lib/mocks/topics");
+    return { data: getMockKeywordBursts(videoId, limit), isMock: true };
+  }
+}
+
 export type TopicsTabData = {
   topics: TopicsResponse;
   transitions: TopicTransitionsResponse;

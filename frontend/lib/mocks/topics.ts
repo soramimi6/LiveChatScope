@@ -1,5 +1,6 @@
 import { youtubeJumpUrl } from "@/lib/format";
 import type {
+  KeywordBurstsResponse,
   KeywordsResponse,
   TopicBlock,
   TopicsResponse,
@@ -148,6 +149,49 @@ export function getMockKeywords(videoId: string): KeywordsResponse {
       count: 450 - index * 18,
       rank: index + 1,
     })),
+  };
+}
+
+export function getMockKeywordBursts(
+  videoId: string,
+  limit = 10,
+): KeywordBurstsResponse {
+  const items = [
+    {
+      rank: 1,
+      token: "ボス",
+      peak_bucket_start_sec: 900,
+      time_text: "00:15:00",
+      peak_count: 120,
+      baseline_count: 12,
+      burst_ratio: 10,
+      jump_url: youtubeJumpUrl(videoId, 900),
+    },
+    {
+      rank: 2,
+      token: "8888",
+      peak_bucket_start_sec: 2100,
+      time_text: "00:35:00",
+      peak_count: 85,
+      baseline_count: 10,
+      burst_ratio: 8.5,
+      jump_url: youtubeJumpUrl(videoId, 2100),
+    },
+    {
+      rank: 3,
+      token: "お疲れ様",
+      peak_bucket_start_sec: 5400,
+      time_text: "01:30:00",
+      peak_count: 64,
+      baseline_count: 8,
+      burst_ratio: 8,
+      jump_url: youtubeJumpUrl(videoId, 5400),
+    },
+  ].slice(0, limit);
+
+  return {
+    video_id: videoId,
+    items,
   };
 }
 
