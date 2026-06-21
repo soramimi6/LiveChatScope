@@ -40,13 +40,19 @@
 .\scripts\e2e-api.ps1 -Url "https://www.youtube.com/watch?v=VIDEO_ID"
 ```
 
-フルフローは `LIVECHATSCOPE_E2E_URL` 環境変数経由で POST → ポーリング → 分析 API → エクスポートを自動検証する（タイムアウト 30 分）。
+```bash
+# Linux / macOS
+./scripts/e2e-api.sh                                    # スモークのみ
+./scripts/e2e-api.sh "https://www.youtube.com/watch?v=VIDEO_ID"  # フルフロー
+```
+
+フルフローは `LIVECHATSCOPE_E2E_URL` 環境変数経由で POST → ポーリング → 分析 API → エクスポートを自動検証する（タイムアウト 30 分）。手動 E2E-01 の主要路径はこの自動テストで代替検証済み。
 
 ### 直近の実行結果（2026-06-21）
 
 | テスト | URL | 結果 |
 |--------|-----|------|
 | スモーク | — | ✅ PASS |
-| フルフロー | `LMXjIpjlCac` | ❌ FAIL（`FETCH_FAILED`: Unable to parse initial video data） |
+| フルフロー | `8ZaCtuVdWYc` | ✅ PASS（~1,960 messages、分析完了） |
 
 詳細: [handoff-current-state.md §6](handoff-current-state.md)

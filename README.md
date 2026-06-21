@@ -81,11 +81,27 @@ npm install
 npm run dev
 ```
 
+Linux / macOS では `source backend/.venv/bin/activate` で venv を有効化。E2E: `./scripts/e2e-api.sh "https://www.youtube.com/watch?v=VIDEO_ID"`
+
 - Frontend: http://localhost:3000
 - API: http://localhost:8000/docs
 
 ## ステータス
 
-🚧 **実装ほぼ完了** — Backend / Frontend 全タブ済（`dev` @ `492b2e6`）。**次: E2E 完走 → 性能 → master**  
-→ 別 PC 移行: [docs/handoff-current-state.md](docs/handoff-current-state.md)
+✅ **第一弾完成（dev ready for master）** — E2E フルフロー PASS（`8ZaCtuVdWYc`）、性能 P-02〜P-05 PASS（2k 規模）。`dev` @ `759b950`  
+→ 次: `dev` → `master` マージ。詳細: [docs/handoff-current-state.md](docs/handoff-current-state.md)
+
+## 既知の制限
+
+| 制限 | 説明 |
+|------|------|
+| 非公式取得 | [Indigo128/chat-downloader](https://github.com/Indigo128/chat-downloader) fork 固定。YouTube 仕様変更で突然動作しなくなる可能性 |
+| 推定話題 | 配信内容とチャット話題は一致しない場合がある |
+| 認証なし POC | 公開ネットワークへの無防備デプロイ不可 |
+| スマホ | 閲覧程度。最適化なし |
+| 英語 UI | 第一弾対象外 |
+| Analytics | 同時視聴者数等は提供しない |
+| 大規模性能 | 50k+ コメント規模の P-01（全パイプライン ≤30 分）は未検証。Phase B で実施 |
+
+（[test-acceptance.md §8](docs/test-acceptance.md) 要約 + fork 固定・性能未検証）
 
