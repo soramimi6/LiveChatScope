@@ -1,7 +1,7 @@
 # LiveChatScope — 画面仕様 / UI 設計
 
 > タスク D-1 | ブランチ: `docs/ui-spec`  
-> 参照: [requirements.md](requirements.md), [architecture.md](architecture.md)
+> 参照: [要件.md](要件.md), [アーキテクチャ.md](アーキテクチャ.md)
 
 ## 1. 概要
 

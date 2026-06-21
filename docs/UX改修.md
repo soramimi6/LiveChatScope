@@ -3,7 +3,7 @@
 > **最終整理**: 2026-06-21  
 > **出典**: ローカル実画面確認（ユーザー feedback）+ コードベース照合（`dev` ブランチ）  
 > **位置づけ**: 第一弾完成後の polish / 差別化 backlog  
-> **関連**: [phase-1-checklist.md](phase-1-checklist.md) §C
+> **関連**: [第一弾チェックリスト.md](第一弾チェックリスト.md) §C
 
 ---
 
@@ -71,8 +71,8 @@
 
 | 項目 | 設計・期待 | 現行実装 | 影響 UX |
 |------|-----------|----------|---------|
-| `analysis_status=partial` | Phase A のみ完了（[architecture.md](architecture.md)） | Pipeline は常に `complete` で終了（`partial` をセットするコードなし） | `PartialAnalysisBadge` は実質未使用 |
-| 進捗 → 結果遷移 | 分析完了待ち（[e2e-runbook.md](e2e-runbook.md)） | `fetch_status=fetched` で即 `/videos/` へ（`analyze/…/page.tsx` L33–35） | 分析 `running` 中に結果画面へ行き API 409 の可能性 |
+| `analysis_status=partial` | Phase A のみ完了（[アーキテクチャ.md](アーキテクチャ.md)） | Pipeline は常に `complete` で終了（`partial` をセットするコードなし） | `PartialAnalysisBadge` は実質未使用 |
+| 進捗 → 結果遷移 | 分析完了待ち（[E2E手順.md](E2E手順.md)） | `fetch_status=fetched` で即 `/videos/` へ（`analyze/…/page.tsx` L33–35） | 分析 `running` 中に結果画面へ行き API 409 の可能性 |
 | 動画メタ | タイトル・チャンネル・尺 | `fetch_worker.py` は **messages のみ** 保存。`title` / `channel_name` / `duration_seconds` は **UPDATE なし**（常に null になりうる） | ヘッダタイトルが `動画 {id}` フォールバック、UX-09 ブロック |
 | `/summary` 件数上限 | `analysis_defaults.json` stage7: keywords **10**, topics preview **6**, highlights **5** | `analysis.py` が highlights / keywords / topic preview すべて **`LIMIT 5` 固定** | UX-07, UX-08 |
 | JSON export `authors` | — | `author_stats` 全行出力だが、Stage 1 は **Top 20 のみ** 保存（`author_top_n=20`） | 「全投稿者」と誤解しやすい |
@@ -370,7 +370,7 @@
 | CSV | messages のみ（実質 OK） | 役割を明示。収益タブ経由も同じ定義に統一 |
 | 収益タブ CSV | 全 messages API 共用 | SC 一覧 CSV か messages CSV かラベルで区別 |
 
-**触るファイル**: `export.py`, `export-menu.tsx`, `revenue-tab.tsx`, `docs/requirements.md`, E2E テスト
+**触るファイル**: `export.py`, `export-menu.tsx`, `revenue-tab.tsx`, `docs/要件.md`, E2E テスト
 
 #### UX-24 → §B 参照
 

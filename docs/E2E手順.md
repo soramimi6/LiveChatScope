@@ -1,6 +1,6 @@
 # LiveChatScope — E2E 手動テスト Runbook
 
-> 参照: [test-acceptance.md](test-acceptance.md) §5 E2E-01
+> 参照: [テスト受入.md](テスト受入.md) §5 E2E-01
 
 ## 前提
 
@@ -11,7 +11,7 @@
 | ブラウザ | Chrome または Edge（最新） |
 | 画面幅 | 1280px 以上 |
 
-サンプル URL はリポジトリに固定しない。テスト実行者が [test-acceptance.md §7](test-acceptance.md) の基準で都度選定する。
+サンプル URL はリポジトリに固定しない。テスト実行者が [テスト受入.md §7](テスト受入.md) の基準で都度選定する。
 
 ---
 
@@ -55,4 +55,4 @@
 | スモーク | — | ✅ PASS |
 | フルフロー | `8ZaCtuVdWYc` | ✅ PASS（~1,960 messages、分析完了） |
 
-詳細: [handoff-current-state.md §6](handoff-current-state.md)
+詳細: [引き継ぎ.md §6](引き継ぎ.md)

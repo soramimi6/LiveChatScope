@@ -1,7 +1,7 @@
 # LiveChatScope — API 詳細仕様
 
 > タスク D-2 | ブランチ: `docs/api-spec`  
-> 参照: [architecture.md](architecture.md), [ui-spec.md](ui-spec.md), [requirements.md](requirements.md)
+> 参照: [アーキテクチャ.md](アーキテクチャ.md), [UI仕様.md](UI仕様.md), [要件.md](要件.md)
 
 ## 1. 概要
 

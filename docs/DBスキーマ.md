@@ -1,7 +1,7 @@
 # LiveChatScope — DB スキーマ詳細
 
 > タスク D-3 | ブランチ: `docs/db-schema`  
-> 参照: [architecture.md](architecture.md), [api-spec.md](api-spec.md)
+> 参照: [アーキテクチャ.md](アーキテクチャ.md), [API仕様.md](API仕様.md)
 
 ## 1. 概要
 
@@ -460,7 +460,7 @@ CREATE TABLE stream_summary (
 ```sql
 CREATE TABLE analysis_params (
     video_id            TEXT PRIMARY KEY REFERENCES videos(video_id) ON DELETE CASCADE,
-    params_json         TEXT NOT NULL,             -- analysis-params.md 既定値スナップショット
+    params_json         TEXT NOT NULL,             -- 分析パラメータ.md 既定値スナップショット
     created_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
 ```

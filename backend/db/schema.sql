@@ -1,5 +1,5 @@
 -- LiveChatScope SQLite schema (Phase 1 POC)
--- See docs/db-schema.md for documentation
+-- See docs/DBスキーマ.md for documentation
 
 PRAGMA foreign_keys = ON;
 
