@@ -7,6 +7,7 @@ from app.services.analysis.message_filter import parse_display_filter
 from app.services.analysis.params import load_analysis_defaults
 from app.services.analysis.pipeline import run_analysis_pipeline, stage_label
 from app.services.fetch_worker import fetch_chat_replay
+from app.services.job_recovery import is_job_stale
 from app.services.url_parser import InvalidYouTubeURLError, extract_video_id
 
 router = APIRouter(prefix="/videos", tags=["videos"])
@@ -61,10 +62,14 @@ def create_video(payload: CreateVideoRequest, background_tasks: BackgroundTasks)
 
     with get_connection() as conn:
         existing = conn.execute(
-            "SELECT fetch_status, analysis_status FROM videos WHERE video_id = ?",
+            "SELECT fetch_status, analysis_status, updated_at FROM videos WHERE video_id = ?",
             (video_id,),
         ).fetchone()
-        if existing and existing["fetch_status"] in {"pending", "fetching"}:
+        if (
+            existing
+            and existing["fetch_status"] in {"pending", "fetching"}
+            and not is_job_stale(existing["updated_at"])
+        ):
             raise HTTPException(
                 status_code=409,
                 detail={"error": {"code": "ALREADY_PROCESSING", "message": "処理中です"}},
