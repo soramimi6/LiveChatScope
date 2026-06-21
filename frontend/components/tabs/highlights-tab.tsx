@@ -25,10 +25,11 @@ import {
   type HighlightsTabData,
   type LowActivityItem,
 } from "@/lib/api/highlights";
-import { formatSeconds } from "@/lib/format";
+import { formatSeconds, formatStreamPosition } from "@/lib/format";
 
 type HighlightsTabProps = {
   videoId: string;
+  durationSeconds?: number | null;
 };
 
 type DensityChartPoint = {
@@ -57,7 +58,13 @@ function findBucketCount(
   return nearest.count;
 }
 
-function HighlightsList({ items }: { items: HighlightItem[] }) {
+function HighlightsList({
+  items,
+  durationSeconds,
+}: {
+  items: HighlightItem[];
+  durationSeconds?: number | null;
+}) {
   if (items.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">盛り上がり候補がありません。</p>
@@ -67,18 +74,24 @@ function HighlightsList({ items }: { items: HighlightItem[] }) {
   return (
     <ol className="space-y-3">
       {items.map((item) => {
+        const streamPosition = formatStreamPosition(
+          item.time_in_seconds,
+          durationSeconds,
+        );
         const sampleMessages = item.context?.sample_messages.slice(0, 3) ?? [];
         const topAuthors = item.context?.top_authors ?? [];
 
         return (
-          <li
-            key={item.rank}
-            className="rounded-lg border px-3 py-3"
-          >
+          <li key={item.rank} className="rounded-lg border px-3 py-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0 space-y-1">
                 <p className="font-medium tabular-nums">
                   {item.rank}. {item.time_text}
+                  {streamPosition.percent != null ? (
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">
+                      {streamPosition.text}
+                    </span>
+                  ) : null}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   スコア {item.score.toFixed(1)}
@@ -107,9 +120,7 @@ function HighlightsList({ items }: { items: HighlightItem[] }) {
                       key={`${item.rank}-${msg.time_in_seconds}-${index}`}
                       className="text-xs text-muted-foreground"
                     >
-                      <span className="font-medium text-foreground">
-                        {msg.author_name ?? "匿名"}
-                      </span>
+                      <span className="font-medium text-foreground">{msg.author_name}</span>
                       <span className="mx-1 tabular-nums">{msg.time_text}</span>
                       <span>{msg.text}</span>
                     </li>
@@ -122,8 +133,8 @@ function HighlightsList({ items }: { items: HighlightItem[] }) {
               <p className="mt-2 text-xs text-muted-foreground">
                 活発な投稿者:{" "}
                 {topAuthors
-                  .map((author) => `${author.author_name ?? "匿名"} (${author.message_count}件)`)
-                  .join(" · ")}
+                  .map((author) => `${author.author_name}（${author.message_count}件）`)
+                  .join("、")}
               </p>
             ) : null}
           </li>
@@ -257,7 +268,7 @@ function DensityChart({
   );
 }
 
-export function HighlightsTab({ videoId }: HighlightsTabProps) {
+export function HighlightsTab({ videoId, durationSeconds }: HighlightsTabProps) {
   const [data, setData] = useState<HighlightsTabData | null>(null);
   const [isMock, setIsMock] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -369,7 +380,10 @@ export function HighlightsTab({ videoId }: HighlightsTabProps) {
           <CardTitle>盛り上がり候補</CardTitle>
         </CardHeader>
         <CardContent>
-          <HighlightsList items={data.highlights.items} />
+          <HighlightsList
+            items={data.highlights.items}
+            durationSeconds={durationSeconds}
+          />
         </CardContent>
       </Card>
 

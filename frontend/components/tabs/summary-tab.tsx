@@ -26,9 +26,26 @@ import {
   getTopicsWithFallback,
   type KeywordBurstsResponse,
   type SummaryResponse,
+  type TopicBlock,
+  type TopicBlockPreview,
   type TopicsResponse,
 } from "@/lib/api";
+import { formatStreamPosition } from "@/lib/format";
 import { formatSuperChatTotals } from "@/lib/topic-super-chat";
+
+function topicBlockToPreview(block: TopicBlock): TopicBlockPreview {
+  return {
+    block_id: block.block_id,
+    block_index: block.block_index,
+    start_sec: block.start_sec,
+    end_sec: block.end_sec,
+    label: block.label,
+    label_note: block.label_note,
+    message_count: block.message_count,
+    unique_authors: block.unique_authors,
+    jump_url: block.jump_url,
+  };
+}
 
 type SummaryTabProps = {
   videoId: string;
@@ -102,6 +119,11 @@ export function SummaryTab({ videoId, durationSeconds, refreshKey = 0 }: Summary
     count: kw.count,
   }));
 
+  const timelineBlocks: TopicBlockPreview[] =
+    topics && topics.items.length > 0
+      ? topics.items.map(topicBlockToPreview)
+      : summary.topic_blocks_preview;
+
   return (
     <div className="space-y-6">
       {isMock ? (
@@ -139,7 +161,7 @@ export function SummaryTab({ videoId, durationSeconds, refreshKey = 0 }: Summary
       </section>
 
       <TopicTimelineBar
-        blocks={summary.topic_blocks_preview}
+        blocks={timelineBlocks}
         durationSeconds={durationSeconds}
       />
 
@@ -157,7 +179,12 @@ export function SummaryTab({ videoId, durationSeconds, refreshKey = 0 }: Summary
               <p className="text-sm text-muted-foreground">盛り上がり候補がありません。</p>
             ) : (
               <ol className="space-y-3">
-                {summary.top_highlights.map((item) => (
+                {summary.top_highlights.map((item) => {
+                  const streamPosition = formatStreamPosition(
+                    item.time_in_seconds,
+                    durationSeconds,
+                  );
+                  return (
                   <li
                     key={item.rank}
                     className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2"
@@ -165,6 +192,11 @@ export function SummaryTab({ videoId, durationSeconds, refreshKey = 0 }: Summary
                     <div className="min-w-0">
                       <p className="font-medium tabular-nums">
                         {item.rank}. {item.time_text}
+                        {streamPosition.percent != null ? (
+                          <span className="ml-2 text-sm font-normal text-muted-foreground">
+                            {streamPosition.text}
+                          </span>
+                        ) : null}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         スコア {item.score.toFixed(1)}
@@ -172,7 +204,8 @@ export function SummaryTab({ videoId, durationSeconds, refreshKey = 0 }: Summary
                     </div>
                     <JumpLinkButton jumpUrl={item.jump_url} timeText={item.time_text} />
                   </li>
-                ))}
+                  );
+                })}
               </ol>
             )}
           </CardContent>
