@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from app.api.common import (
     format_time_text,
@@ -8,11 +9,94 @@ from app.api.common import (
     require_analysis_ready,
     utc_now_iso,
 )
+from app.services.analysis.message_filter import serialize_display_filter
 from app.services.analysis.params import load_analysis_defaults
+from app.services.analysis.refilter_pipeline import run_refilter_pipeline
 from app.services.super_chat_status import compute_super_chat_status
 from app.db import get_connection
 
 router = APIRouter(prefix="/videos", tags=["analysis"])
+
+
+class DisplayFilterConfig(BaseModel):
+    exclude_stamp_only: bool = True
+    exclude_ng_keywords: bool = False
+    ng_keywords: list[str] = Field(default_factory=list)
+    excluded_author_ids: list[str] = Field(default_factory=list)
+
+
+class RefilterRequest(BaseModel):
+    display_filter: DisplayFilterConfig
+
+
+class RefilterResponse(BaseModel):
+    video_id: str
+    analysis_status: str
+    status_url: str
+
+
+@router.post("/{video_id}/analysis/refilter", status_code=202, response_model=RefilterResponse)
+def refilter_analysis(
+    video_id: str,
+    payload: RefilterRequest,
+    background_tasks: BackgroundTasks,
+):
+    row = get_video_row(video_id)
+    if row["fetch_status"] != "fetched":
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": {
+                    "code": "ANALYSIS_NOT_READY",
+                    "message": "チャット取得が完了していません",
+                }
+            },
+        )
+    if row["analysis_status"] == "running":
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": {
+                    "code": "ANALYSIS_RUNNING",
+                    "message": "分析の更新中です",
+                }
+            },
+        )
+    if row["analysis_status"] != "complete":
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": {
+                    "code": "ANALYSIS_NOT_READY",
+                    "message": "初回分析が完了していません",
+                }
+            },
+        )
+
+    filter_json = serialize_display_filter(payload.display_filter.model_dump())
+    with get_connection() as conn:
+        conn.execute(
+            """
+            UPDATE videos
+            SET display_filter_json = ?,
+                analysis_status = 'running',
+                analysis_stage = 4,
+                analysis_error_code = NULL,
+                analysis_error_message = NULL,
+                updated_at = ?
+            WHERE video_id = ?
+            """,
+            (filter_json, utc_now_iso(), video_id),
+        )
+        conn.commit()
+
+    background_tasks.add_task(run_refilter_pipeline, video_id)
+
+    return RefilterResponse(
+        video_id=video_id,
+        analysis_status="running",
+        status_url=f"/api/v1/videos/{video_id}/status",
+    )
 
 
 def _summary_preview_limits() -> tuple[int, int, int]:

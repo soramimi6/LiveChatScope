@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS videos (
     messages_fetched    INTEGER NOT NULL DEFAULT 0,
     fetched_at          TEXT,
     analyzed_at         TEXT,
+    display_filter_json TEXT,
     created_at          TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );

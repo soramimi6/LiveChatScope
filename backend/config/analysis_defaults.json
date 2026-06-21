@@ -59,5 +59,15 @@
     "summary_highlights_n": 5,
     "summary_keywords_n": 10,
     "summary_topic_preview_n": 6
+  },
+  "message_filter": {
+    "default_exclude_stamp_only": true,
+    "allowed_message_types": ["text_message"],
+    "default_ng_keywords": [],
+    "stamp_only_regexes": [
+      "^[\\s]+$",
+      "^(:[\\w-]+:\\s*)+$",
+      "^[\\U0001F300-\\U0001FAFF\\U00002600-\\U000027BF\\s]+$"
+    ]
   }
 }

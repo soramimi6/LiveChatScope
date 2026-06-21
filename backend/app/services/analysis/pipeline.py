@@ -2,6 +2,10 @@ import logging
 from datetime import datetime, timezone
 
 from app.db import get_connection
+from app.services.analysis.message_filter import (
+    default_display_filter,
+    serialize_display_filter,
+)
 from app.services.analysis.params import load_analysis_defaults, save_analysis_params_snapshot
 from app.services.analysis.stage0 import run_stage0_normalize
 from app.services.analysis.stage1 import run_stage1_basic
@@ -129,6 +133,22 @@ def run_analysis_pipeline(video_id: str) -> None:
 
         with get_connection() as conn:
             run_stage8_exports(conn, video_id, params)
+            filter_row = conn.execute(
+                "SELECT display_filter_json FROM videos WHERE video_id = ?",
+                (video_id,),
+            ).fetchone()
+            if filter_row is not None and filter_row["display_filter_json"] is None:
+                conn.execute(
+                    """
+                    UPDATE videos
+                    SET display_filter_json = ?
+                    WHERE video_id = ?
+                    """,
+                    (
+                        serialize_display_filter(default_display_filter(params)),
+                        video_id,
+                    ),
+                )
             conn.execute(
                 """
                 UPDATE videos

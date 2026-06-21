@@ -14,6 +14,12 @@ from app.api.common import (
 )
 from app.api.export_names import export_download_filename
 from app.db import get_connection
+from app.services.analysis.message_filter import (
+    is_filter_active,
+    load_video_display_filter,
+    should_include_for_keyword_analysis,
+)
+from app.services.analysis.params import load_analysis_defaults
 from app.services.analysis.stage8 import (
     _build_markdown_clips,
     _build_markdown_summary,
@@ -112,8 +118,16 @@ def export_video(
     return Response(content=body, media_type="text/markdown; charset=utf-8", headers=headers)
 
 
+def _message_passes_display_filter(msg, filter_cfg: dict, params: dict) -> bool:
+    if not is_filter_active(filter_cfg):
+        return True
+    return should_include_for_keyword_analysis(msg, filter_cfg, params)
+
+
 def _build_json_export(video_id: str, row) -> str:
+    params = load_analysis_defaults()
     with get_connection() as conn:
+        display_filter = load_video_display_filter(conn, video_id, params)
         density = [
             {"bucket_start_sec": b["bucket_start_sec"], "count": b["count"]}
             for b in conn.execute(
@@ -186,6 +200,7 @@ def _build_json_export(video_id: str, row) -> str:
                 """,
                 (video_id,),
             ).fetchall()
+            if _message_passes_display_filter(msg, display_filter, params)
         ]
 
         highlights: list[dict] = []
@@ -301,21 +316,25 @@ def _build_json_export(video_id: str, row) -> str:
 
 
 def _build_csv_export(video_id: str) -> str:
+    params = load_analysis_defaults()
     buffer = io.StringIO()
     writer = csv.writer(buffer)
     writer.writerow(
         ["time_in_seconds", "time_text", "author_name", "message_type", "text", "jump_url"]
     )
     with get_connection() as conn:
+        display_filter = load_video_display_filter(conn, video_id, params)
         for msg in conn.execute(
             """
-            SELECT time_in_seconds, author_name, message_type, text
+            SELECT time_in_seconds, author_name, message_type, text, author_id
             FROM messages
             WHERE video_id = ?
             ORDER BY time_in_seconds ASC, id ASC
             """,
             (video_id,),
         ).fetchall():
+            if not _message_passes_display_filter(msg, display_filter, params):
+                continue
             time_sec = msg["time_in_seconds"] or 0.0
             writer.writerow(
                 [
