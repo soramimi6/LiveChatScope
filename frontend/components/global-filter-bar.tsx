@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, Filter, Loader2, Plus, X } from "lucide-react";
+import { RefilterPendingBadge } from "@/components/refilter-pending-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import {
   saveSessionFilter,
 } from "@/lib/session-filter";
 import { cn } from "@/lib/utils";
+import type { DisplayFilterActions } from "@/components/display-filter-actions-context";
 
 type GlobalFilterBarProps = {
   videoId: string;
@@ -26,6 +28,7 @@ type GlobalFilterBarProps = {
   analysisStatus: string;
   onRefilterComplete: (filter: DisplayFilter) => void;
   onRefilterStart?: () => void;
+  onActionsReady?: (actions: DisplayFilterActions) => void;
   className?: string;
 };
 
@@ -47,6 +50,7 @@ function mergeSessionFilter(
 function isFilterActive(filter: DisplayFilter): boolean {
   if (filter.exclude_stamp_only) return true;
   if (filter.exclude_ng_keywords && filter.ng_keywords.length > 0) return true;
+  if ((filter.auto_ng_keywords?.length ?? 0) > 0) return true;
   if (filter.excluded_author_ids.length > 0) return true;
   return false;
 }
@@ -55,6 +59,11 @@ function filterTooltip(filter: DisplayFilter): string {
   const parts: string[] = [];
   if (filter.exclude_stamp_only) {
     parts.push("スタンプのみ発言を除外");
+  }
+  if ((filter.auto_ng_keywords?.length ?? 0) > 0) {
+    parts.push(
+      `自動 NG キーワード（${filter.auto_ng_keywords.join("、")}）`,
+    );
   }
   if (filter.exclude_ng_keywords && filter.ng_keywords.length > 0) {
     parts.push(`NGキーワードを除外（${filter.ng_keywords.join("、")}）`);
@@ -71,6 +80,7 @@ export function GlobalFilterBar({
   analysisStatus,
   onRefilterComplete,
   onRefilterStart,
+  onActionsReady,
   className,
 }: GlobalFilterBarProps) {
   const [expanded, setExpanded] = useState(false);
@@ -188,23 +198,43 @@ export function GlobalFilterBar({
     [videoId, onRefilterStart, startPolling],
   );
 
+  const addNgKeywordFromValue = useCallback(
+    (raw: string) => {
+      const keyword = normalizeKeyword(raw);
+      if (!keyword) return;
+      if (
+        filterRef.current.ng_keywords.some(
+          (k) => k.toLowerCase() === keyword.toLowerCase(),
+        )
+      ) {
+        return;
+      }
+      void applyFilterChange({
+        ...filterRef.current,
+        ng_keywords: [...filterRef.current.ng_keywords, keyword],
+        exclude_ng_keywords: true,
+      });
+    },
+    [applyFilterChange],
+  );
+
   const addNgKeyword = useCallback(() => {
-    const keyword = normalizeKeyword(ngInput);
-    if (!keyword) return;
-    if (filterRef.current.ng_keywords.some(
-      (k) => k.toLowerCase() === keyword.toLowerCase(),
-    )) {
-      setNgInput("");
-      return;
-    }
-    const nextFilter: DisplayFilter = {
-      ...filterRef.current,
-      ng_keywords: [...filterRef.current.ng_keywords, keyword],
-      exclude_ng_keywords: true,
-    };
+    addNgKeywordFromValue(ngInput);
     setNgInput("");
-    void applyFilterChange(nextFilter);
-  }, [ngInput, applyFilterChange]);
+  }, [ngInput, addNgKeywordFromValue]);
+
+  useEffect(() => {
+    onActionsReady?.({
+      addNgKeyword: addNgKeywordFromValue,
+      ngKeywords: filter.ng_keywords,
+      updating,
+    });
+  }, [
+    filter.ng_keywords,
+    updating,
+    onActionsReady,
+    addNgKeywordFromValue,
+  ]);
 
   const removeNgKeyword = useCallback(
     (keyword: string) => {
@@ -213,6 +243,33 @@ export function GlobalFilterBar({
         ...filterRef.current,
         ng_keywords,
         exclude_ng_keywords: ng_keywords.length > 0 && filterRef.current.exclude_ng_keywords,
+      });
+    },
+    [applyFilterChange],
+  );
+
+  const removeAutoNgKeyword = useCallback(
+    (keyword: string) => {
+      const normalized = normalizeKeyword(keyword);
+      if (!normalized) return;
+
+      const dismissed = filterRef.current.dismissed_auto_ng_keywords ?? [];
+      const nextDismissed =
+        dismissed.some((k) => k.toLowerCase() === normalized.toLowerCase())
+          ? dismissed
+          : [...dismissed, normalized];
+      const auto_ng_keywords = filterRef.current.auto_ng_keywords.filter(
+        (k) => k.toLowerCase() !== normalized.toLowerCase(),
+      );
+
+      void applyFilterChange({
+        ...filterRef.current,
+        auto_ng_keywords,
+        dismissed_auto_ng_keywords: nextDismissed,
+        exclude_ng_keywords:
+          (filterRef.current.exclude_ng_keywords &&
+            filterRef.current.ng_keywords.length > 0) ||
+          auto_ng_keywords.length > 0,
       });
     },
     [applyFilterChange],
@@ -245,7 +302,9 @@ export function GlobalFilterBar({
   );
 
   const disabled = updating || analysisStatus === "running";
-  const ngKeywordsAvailable = filter.ng_keywords.length > 0;
+  const autoNgKeywords = filter.auto_ng_keywords ?? [];
+  const ngKeywordsAvailable =
+    filter.ng_keywords.length > 0 || autoNgKeywords.length > 0;
   const filterActive = isFilterActive(filter);
 
   return (
@@ -276,12 +335,7 @@ export function GlobalFilterBar({
                 フィルター適用中
               </Badge>
             ) : null}
-            {updating ? (
-              <Badge variant="outline" className="gap-1">
-                <Loader2 className="size-3 animate-spin" />
-                反映中
-              </Badge>
-            ) : null}
+            {updating ? <RefilterPendingBadge /> : null}
           </div>
           <p className="text-xs text-muted-foreground">
             {expanded
@@ -303,26 +357,6 @@ export function GlobalFilterBar({
       {expanded ? (
         <>
       <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:gap-8">
-        <label className="flex cursor-pointer items-start gap-3">
-          <Switch
-            checked={filter.exclude_stamp_only}
-            disabled={disabled}
-            aria-label="スタンプのみ発言を除外"
-            onCheckedChange={(checked) => {
-              void applyFilterChange({
-                ...filterRef.current,
-                exclude_stamp_only: checked,
-              });
-            }}
-          />
-          <span className="space-y-0.5">
-            <span className="text-sm font-medium">スタンプのみ発言を除外</span>
-            <span className="block text-xs text-muted-foreground">
-              絵文字・スタンプのみのコメントを話題分析から除外します
-            </span>
-          </span>
-        </label>
-
         <label
           className={cn(
             "flex items-start gap-3",
@@ -344,26 +378,76 @@ export function GlobalFilterBar({
             <span className="text-sm font-medium">NGキーワードを除外</span>
             <span className="block text-xs text-muted-foreground">
               {ngKeywordsAvailable
-                ? "下で登録した語句を含むコメントを除外します"
+                ? autoNgKeywords.length > 0 && filter.ng_keywords.length === 0
+                  ? "自動検出された語句はキーワード集計から除外されます"
+                  : "下で登録した語句を含むコメントを除外します"
                 : "先に NG キーワードを追加してください"}
+            </span>
+          </span>
+        </label>
+
+        <label className="flex cursor-pointer items-start gap-3">
+          <Switch
+            checked={filter.exclude_stamp_only}
+            disabled={disabled}
+            aria-label="スタンプのみ発言を除外"
+            onCheckedChange={(checked) => {
+              void applyFilterChange({
+                ...filterRef.current,
+                exclude_stamp_only: checked,
+              });
+            }}
+          />
+          <span className="space-y-0.5">
+            <span className="text-sm font-medium">スタンプのみ発言を除外</span>
+            <span className="block text-xs text-muted-foreground">
+              絵文字・スタンプのみのコメントと `:name:` 形式のスタンプコードを話題分析から除外します
             </span>
           </span>
         </label>
       </div>
 
-      <div className="space-y-4 border-t pt-4">
+      <div className="space-y-3 border-t pt-4">
         <p className="text-xs text-muted-foreground">
-          NG キーワードと除外ユーザーはこのブラウザタブのセッションのみ保持されます（タブを閉じるとリセット）。
+          手動 NG キーワードと除外ユーザーはこのブラウザタブのセッションのみ保持されます。自動 NG
+          の解除は動画に保存され、再分析時も反映されます。
         </p>
 
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium">NG キーワード</h3>
+        <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
+          <div className="min-w-0 space-y-2">
+            <h3 className="text-sm font-medium">NG キーワード</h3>
+          {autoNgKeywords.length > 0 ? (
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">
+                分析時に自動検出された全域語（キーワード集計から除外）。誤検知の場合は削除して解析対象に戻せます。
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {autoNgKeywords.map((keyword) => (
+                  <Badge key={keyword} variant="outline" className="gap-1 pr-1">
+                    {keyword}
+                    <span className="text-[10px] font-normal text-muted-foreground">
+                      自動追加
+                    </span>
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      className="rounded-sm p-0.5 hover:bg-muted"
+                      aria-label={`${keyword} を自動 NG から解除`}
+                      onClick={() => removeAutoNgKeyword(keyword)}
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div className="flex flex-wrap gap-2">
             <Input
               value={ngInput}
               disabled={disabled}
               placeholder="例: 草"
-              className="max-w-xs"
+              className="min-w-0 flex-1 sm:max-w-xs"
               aria-label="NG キーワード"
               onChange={(event) => setNgInput(event.target.value)}
               onKeyDown={(event) => {
@@ -404,59 +488,60 @@ export function GlobalFilterBar({
           ) : (
             <p className="text-xs text-muted-foreground">未登録</p>
           )}
-        </div>
-
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium">除外ユーザー ID</h3>
-          <p className="text-xs text-muted-foreground">
-            コミュニティタブの author_id を指定すると、そのユーザーの発言を話題分析から除外します。
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Input
-              value={authorInput}
-              disabled={disabled}
-              placeholder="例: UCxxxx..."
-              className="max-w-xs font-mono text-xs"
-              aria-label="除外ユーザー ID"
-              onChange={(event) => setAuthorInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  addExcludedAuthor();
-                }
-              }}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={disabled || !authorInput.trim()}
-              onClick={addExcludedAuthor}
-            >
-              <Plus data-icon="inline-start" />
-              追加
-            </Button>
           </div>
-          {filter.excluded_author_ids.length > 0 ? (
+
+          <div className="min-w-0 space-y-2">
+            <h3 className="text-sm font-medium">除外ユーザー ID</h3>
+            <p className="text-xs text-muted-foreground">
+              コミュニティタブの author_id を指定すると、そのユーザーの発言を話題分析から除外します。
+            </p>
             <div className="flex flex-wrap gap-2">
-              {filter.excluded_author_ids.map((authorId) => (
-                <Badge key={authorId} variant="outline" className="gap-1 pr-1 font-mono text-xs">
-                  {authorId}
-                  <button
-                    type="button"
-                    disabled={disabled}
-                    className="rounded-sm p-0.5 hover:bg-muted"
-                    aria-label={`${authorId} を削除`}
-                    onClick={() => removeExcludedAuthor(authorId)}
-                  >
-                    <X className="size-3" />
-                  </button>
-                </Badge>
-              ))}
+              <Input
+                value={authorInput}
+                disabled={disabled}
+                placeholder="例: UCxxxx..."
+                className="min-w-0 flex-1 font-mono text-xs sm:max-w-xs"
+                aria-label="除外ユーザー ID"
+                onChange={(event) => setAuthorInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    addExcludedAuthor();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={disabled || !authorInput.trim()}
+                onClick={addExcludedAuthor}
+              >
+                <Plus data-icon="inline-start" />
+                追加
+              </Button>
             </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">未登録</p>
-          )}
+            {filter.excluded_author_ids.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {filter.excluded_author_ids.map((authorId) => (
+                  <Badge key={authorId} variant="outline" className="gap-1 pr-1 font-mono text-xs">
+                    {authorId}
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      className="rounded-sm p-0.5 hover:bg-muted"
+                      aria-label={`${authorId} を削除`}
+                      onClick={() => removeExcludedAuthor(authorId)}
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">未登録</p>
+            )}
+          </div>
         </div>
       </div>
 

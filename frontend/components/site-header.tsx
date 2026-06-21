@@ -4,10 +4,12 @@ import Image from "next/image";
 type SiteHeaderProps = {
   title?: string;
   subtitle?: string;
+  /** When set with title, the title links to this YouTube video. */
+  videoId?: string;
   linkedVideoId?: string;
 };
 
-export function SiteHeader({ title, subtitle, linkedVideoId }: SiteHeaderProps) {
+export function SiteHeader({ title, subtitle, videoId, linkedVideoId }: SiteHeaderProps) {
   return (
     <header className="border-b border-border/60 bg-background/80 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-start justify-between gap-6 px-4 py-3.5 sm:px-6">
@@ -42,7 +44,19 @@ export function SiteHeader({ title, subtitle, linkedVideoId }: SiteHeaderProps) 
             </p>
           ) : title ? (
             <p className="truncate pl-[2.625rem] text-sm leading-snug text-muted-foreground">
-              {title}
+              {videoId ? (
+                <a
+                  href={`https://www.youtube.com/watch?v=${videoId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-foreground hover:text-primary hover:underline"
+                  title="YouTube で開く"
+                >
+                  {title}
+                </a>
+              ) : (
+                title
+              )}
             </p>
           ) : (
             <p className="pl-[2.625rem] text-sm leading-snug text-muted-foreground">

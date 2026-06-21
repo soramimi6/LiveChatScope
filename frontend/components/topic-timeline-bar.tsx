@@ -1,23 +1,17 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { SectionHeading } from "@/components/section-heading";
+import { TopicLabelTokens } from "@/components/topic-label-tokens";
 import type { TopicBlockPreview } from "@/lib/api";
 import { formatSeconds } from "@/lib/format";
-
-const BLOCK_COLORS = [
-  "#3b82f6",
-  "#8b5cf6",
-  "#06b6d4",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#ec4899",
-  "#6366f1",
-];
+import { getTopicBlockColor } from "@/lib/topic-block-colors";
 
 type TopicTimelineBarProps = {
   blocks: TopicBlockPreview[];
   durationSeconds?: number | null;
+  interactiveLabels?: boolean;
+  refilterPending?: boolean;
 };
 
 function formatAxisMinutes(seconds: number): string {
@@ -30,12 +24,17 @@ function formatAxisMinutes(seconds: number): string {
   return `${m}分`;
 }
 
-export function TopicTimelineBar({ blocks, durationSeconds }: TopicTimelineBarProps) {
+export function TopicTimelineBar({
+  blocks,
+  durationSeconds,
+  interactiveLabels = false,
+  refilterPending = false,
+}: TopicTimelineBarProps) {
   if (blocks.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>構成タイムライン</CardTitle>
+          <SectionHeading title="構成タイムライン" refilterPending={refilterPending} />
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">話題ブロックデータがありません。</p>
@@ -55,7 +54,7 @@ export function TopicTimelineBar({ blocks, durationSeconds }: TopicTimelineBarPr
   return (
     <Card>
       <CardHeader>
-        <CardTitle>構成タイムライン</CardTitle>
+        <SectionHeading title="構成タイムライン" refilterPending={refilterPending} />
       </CardHeader>
       <CardContent>
         <div
@@ -67,7 +66,7 @@ export function TopicTimelineBar({ blocks, durationSeconds }: TopicTimelineBarPr
             const leftPct = (block.start_sec / axisMax) * 100;
             const widthPct =
               (Math.max(block.end_sec - block.start_sec, 0) / axisMax) * 100;
-            const color = BLOCK_COLORS[index % BLOCK_COLORS.length];
+            const color = getTopicBlockColor(index);
 
             return (
               <div
@@ -89,14 +88,21 @@ export function TopicTimelineBar({ blocks, durationSeconds }: TopicTimelineBarPr
             <span key={tick}>{formatAxisMinutes(tick)}</span>
           ))}
         </div>
-        <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
           {blocks.map((block, index) => (
-            <li key={block.block_id} className="flex items-center gap-1.5">
+            <li key={block.block_id} className="flex max-w-full items-start gap-1.5">
               <span
-                className="inline-block size-2.5 rounded-sm"
-                style={{ backgroundColor: BLOCK_COLORS[index % BLOCK_COLORS.length] }}
+                className="mt-0.5 inline-block size-2.5 shrink-0 rounded-sm"
+                style={{ backgroundColor: getTopicBlockColor(index) }}
+                aria-hidden
               />
-              <span className="truncate max-w-[12rem]">{block.label}</span>
+              <TopicLabelTokens
+                label={block.label}
+                labelNote={block.label_note}
+                interactive={interactiveLabels}
+                showEstimatedBadge={false}
+                className="min-w-0 text-xs text-muted-foreground"
+              />
             </li>
           ))}
         </ul>

@@ -4,43 +4,44 @@ import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import { Info } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { SectionHeading } from "@/components/section-heading";
 import { Skeleton } from "@/components/ui/skeleton";
 import { KeywordBurstRanking } from "@/components/keyword-burst-ranking";
+import { TopicLabelTokens } from "@/components/topic-label-tokens";
 import { TopicBlockThumbnail } from "@/components/topic-block-thumbnail";
 import { TopicTimelineBar } from "@/components/topic-timeline-bar";
 import {
   getKeywordBurstsWithFallback,
   getTopicsTabDataWithFallback,
   type KeywordBurstsResponse,
-  type SuperChatTotal,
   type TopicBlock,
   type TopicTransition,
   type TopicsTabData,
 } from "@/lib/api";
 import { formatSeconds } from "@/lib/format";
+import { formatSuperChatTotals } from "@/lib/topic-super-chat";
 
 type TopicsTabProps = {
   videoId: string;
   durationSeconds?: number | null;
   refreshKey?: number;
+  refilterPending?: boolean;
 };
 
-function formatSuperChatTotals(totals: SuperChatTotal[]): string {
-  if (totals.length === 0) return "—";
-  return totals
-    .map((t) => `${t.amount.toLocaleString()} ${t.currency}（${t.count}件）`)
-    .join(" / ");
-}
-
-function EstimatedLabel({ block }: { block: TopicBlock }) {
+function EstimatedLabel({
+  block,
+  interactive,
+}: {
+  block: TopicBlock;
+  interactive?: boolean;
+}) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span title={block.label_note}>{block.label}</span>
-      <Badge variant="outline" className="shrink-0 text-[10px]">
-        推定
-      </Badge>
-    </div>
+    <TopicLabelTokens
+      label={block.label}
+      labelNote={block.label_note}
+      interactive={interactive}
+    />
   );
 }
 
@@ -48,10 +49,12 @@ function TopicBlocksTable({
   blocks,
   rowRefs,
   videoId,
+  interactiveLabels = true,
 }: {
   blocks: TopicBlock[];
   rowRefs: MutableRefObject<Record<string, HTMLTableRowElement | null>>;
   videoId: string;
+  interactiveLabels?: boolean;
 }) {
   if (blocks.length === 0) {
     return (
@@ -105,7 +108,7 @@ function TopicBlocksTable({
                 {formatSeconds(block.start_sec)} – {formatSeconds(block.end_sec)}
               </td>
               <td className="px-3 py-2">
-                <EstimatedLabel block={block} />
+                <EstimatedLabel block={block} interactive={interactiveLabels} />
                 <p className="mt-0.5 text-xs text-muted-foreground">{block.label_note}</p>
               </td>
               <td className="px-3 py-2 tabular-nums">
@@ -114,7 +117,7 @@ function TopicBlocksTable({
               <td className="px-3 py-2 tabular-nums">
                 {block.unique_authors.toLocaleString()}
               </td>
-              <td className="px-3 py-2 whitespace-nowrap">
+              <td className="px-3 py-2 whitespace-pre-line">
                 {formatSuperChatTotals(block.super_chat_total)}
               </td>
             </tr>
@@ -187,7 +190,12 @@ function KeywordsSection({ keywords }: { keywords: TopicsTabData["keywords"] }) 
   );
 }
 
-export function TopicsTab({ videoId, durationSeconds, refreshKey = 0 }: TopicsTabProps) {
+export function TopicsTab({
+  videoId,
+  durationSeconds,
+  refreshKey = 0,
+  refilterPending = false,
+}: TopicsTabProps) {
   const [data, setData] = useState<TopicsTabData | null>(null);
   const [bursts, setBursts] = useState<KeywordBurstsResponse | null>(null);
   const [isMock, setIsMock] = useState(false);
@@ -252,7 +260,12 @@ export function TopicsTab({ videoId, durationSeconds, refreshKey = 0 }: TopicsTa
       ) : null}
 
       <section aria-label="構成タイムライン">
-        <TopicTimelineBar blocks={blocks} durationSeconds={durationSeconds} />
+        <TopicTimelineBar
+          blocks={blocks}
+          durationSeconds={durationSeconds}
+          interactiveLabels={!isMock}
+          refilterPending={refilterPending}
+        />
         {blocks.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-2">
             {blocks.map((block) => (
@@ -273,16 +286,21 @@ export function TopicsTab({ videoId, durationSeconds, refreshKey = 0 }: TopicsTa
 
       <Card>
         <CardHeader>
-          <CardTitle>話題ブロック一覧</CardTitle>
+          <SectionHeading title="話題ブロック一覧" refilterPending={refilterPending} />
         </CardHeader>
         <CardContent>
-          <TopicBlocksTable blocks={blocks} rowRefs={rowRefs} videoId={videoId} />
+          <TopicBlocksTable
+            blocks={blocks}
+            rowRefs={rowRefs}
+            videoId={videoId}
+            interactiveLabels={!isMock}
+          />
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>話題遷移</CardTitle>
+          <SectionHeading title="話題遷移" refilterPending={refilterPending} />
         </CardHeader>
         <CardContent>
           <TransitionsTable items={data.transitions.items} />
@@ -291,14 +309,16 @@ export function TopicsTab({ videoId, durationSeconds, refreshKey = 0 }: TopicsTa
 
       <Card>
         <CardHeader>
-          <CardTitle>キーワード Top 20</CardTitle>
+          <SectionHeading title="キーワード Top 20" refilterPending={refilterPending} />
         </CardHeader>
         <CardContent>
           <KeywordsSection keywords={data.keywords} />
         </CardContent>
       </Card>
 
-      {bursts ? <KeywordBurstRanking items={bursts.items} /> : null}
+      {bursts ? (
+        <KeywordBurstRanking items={bursts.items} refilterPending={refilterPending} />
+      ) : null}
     </div>
   );
 }

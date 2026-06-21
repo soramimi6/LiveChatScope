@@ -5,6 +5,7 @@ import { Info, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SectionHeading } from "@/components/section-heading";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import {
@@ -31,6 +32,7 @@ type CommunityTabProps = {
   videoId: string;
   durationSeconds?: number | null;
   refreshKey?: number;
+  refilterPending?: boolean;
 };
 
 const CORE_REGULAR_DESCRIPTION =
@@ -429,6 +431,7 @@ export function CommunityTab({
   videoId,
   durationSeconds,
   refreshKey = 0,
+  refilterPending = false,
 }: CommunityTabProps) {
   const [data, setData] = useState<CommunityTabData | null>(null);
   const [isMock, setIsMock] = useState(false);
@@ -558,7 +561,7 @@ export function CommunityTab({
 
       <Card>
         <CardHeader>
-          <CardTitle>話題別 Top 投稿者</CardTitle>
+          <SectionHeading title="話題別 Top 投稿者" refilterPending={refilterPending} />
         </CardHeader>
         <CardContent>
           <TopicAuthorsSection

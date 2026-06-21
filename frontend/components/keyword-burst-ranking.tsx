@@ -1,22 +1,25 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { SectionHeading } from "@/components/section-heading";
 import { JumpLinkButton } from "@/components/jump-link-button";
 import type { KeywordBurst } from "@/lib/api";
 
 type KeywordBurstRankingProps = {
   items: KeywordBurst[];
   title?: string;
+  refilterPending?: boolean;
 };
 
 export function KeywordBurstRanking({
   items,
   title = "急上昇キーワード Top 10",
+  refilterPending = false,
 }: KeywordBurstRankingProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <SectionHeading title={title} refilterPending={refilterPending} />
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (

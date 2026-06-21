@@ -5,14 +5,15 @@ import { Info } from "lucide-react";
 import {
   Bar,
   BarChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+import { ChartContainer } from "@/components/chart-container";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SectionHeading } from "@/components/section-heading";
 import { Skeleton } from "@/components/ui/skeleton";
 import { JumpLinkButton } from "@/components/jump-link-button";
 import { KeywordBurstRanking } from "@/components/keyword-burst-ranking";
@@ -51,9 +52,15 @@ type SummaryTabProps = {
   videoId: string;
   durationSeconds?: number | null;
   refreshKey?: number;
+  refilterPending?: boolean;
 };
 
-export function SummaryTab({ videoId, durationSeconds, refreshKey = 0 }: SummaryTabProps) {
+export function SummaryTab({
+  videoId,
+  durationSeconds,
+  refreshKey = 0,
+  refilterPending = false,
+}: SummaryTabProps) {
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [topics, setTopics] = useState<TopicsResponse | null>(null);
   const [bursts, setBursts] = useState<KeywordBurstsResponse | null>(null);
@@ -91,10 +98,12 @@ export function SummaryTab({ videoId, durationSeconds, refreshKey = 0 }: Summary
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, i) => (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+          {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-24 w-full rounded-xl" />
           ))}
+          <Skeleton className="h-24 w-full rounded-xl sm:col-span-2 lg:col-span-2" />
+          <Skeleton className="h-24 w-full rounded-xl" />
         </div>
         <Skeleton className="h-40 w-full rounded-xl" />
         <div className="grid gap-4 lg:grid-cols-2">
@@ -135,7 +144,7 @@ export function SummaryTab({ videoId, durationSeconds, refreshKey = 0 }: Summary
       ) : null}
 
       <section aria-label="KPI">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
           <KpiCard
             title="総コメント"
             value={summary.message_count.toLocaleString()}
@@ -152,6 +161,7 @@ export function SummaryTab({ videoId, durationSeconds, refreshKey = 0 }: Summary
           <KpiCard
             title="スパチャ合計"
             value={formatSuperChatTotals(summary.super_chat_total)}
+            className="sm:col-span-2 lg:col-span-2"
           />
           <KpiCard
             title="話題数"
@@ -163,16 +173,22 @@ export function SummaryTab({ videoId, durationSeconds, refreshKey = 0 }: Summary
       <TopicTimelineBar
         blocks={timelineBlocks}
         durationSeconds={durationSeconds}
+        interactiveLabels={!isMock}
+        refilterPending={refilterPending}
       />
 
-      {topics ? <TopicSuperChatRanking blocks={topics.items} /> : null}
+      {topics ? (
+        <TopicSuperChatRanking blocks={topics.items} refilterPending={refilterPending} interactiveLabels={!isMock} />
+      ) : null}
 
-      {bursts ? <KeywordBurstRanking items={bursts.items} /> : null}
+      {bursts ? (
+        <KeywordBurstRanking items={bursts.items} refilterPending={refilterPending} />
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Top 盛り上がり</CardTitle>
+            <SectionHeading title="Top 盛り上がり" refilterPending={refilterPending} />
           </CardHeader>
           <CardContent>
             {summary.top_highlights.length === 0 ? (
@@ -213,7 +229,7 @@ export function SummaryTab({ videoId, durationSeconds, refreshKey = 0 }: Summary
 
         <Card>
           <CardHeader>
-            <CardTitle>Top キーワード</CardTitle>
+            <SectionHeading title="Top キーワード" refilterPending={refilterPending} />
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-wrap gap-2">
@@ -225,28 +241,26 @@ export function SummaryTab({ videoId, durationSeconds, refreshKey = 0 }: Summary
               ))}
             </div>
             {keywordChartData.length > 0 ? (
-              <div className="h-48 w-full" aria-hidden>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={keywordChartData} layout="vertical" margin={{ left: 8, right: 8 }}>
-                    <XAxis type="number" hide />
-                    <YAxis
-                      type="category"
-                      dataKey="token"
-                      width={72}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <Tooltip
-                      formatter={(value) => [`${value} 件`, "出現数"]}
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                    />
-                    <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <ChartContainer className="h-48 w-full" aria-hidden>
+                <BarChart data={keywordChartData} layout="vertical" margin={{ left: 8, right: 8 }}>
+                  <XAxis type="number" hide />
+                  <YAxis
+                    type="category"
+                    dataKey="token"
+                    width={72}
+                    tick={{ fontSize: 11 }}
+                  />
+                  <Tooltip
+                    formatter={(value) => [`${value} 件`, "出現数"]}
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
+                    }}
+                  />
+                  <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ChartContainer>
             ) : null}
             <table className="sr-only">
               <caption>Top キーワード（アクセシビリティ用）</caption>
@@ -272,7 +286,12 @@ export function SummaryTab({ videoId, durationSeconds, refreshKey = 0 }: Summary
       </div>
 
       <section aria-label="話題スコアカード">
-        <h3 className="mb-3 text-sm font-medium">話題スコアカード</h3>
+        <SectionHeading
+          title="話題スコアカード"
+          as="section"
+          refilterPending={refilterPending}
+          className="mb-3"
+        />
         {summary.topic_blocks_preview.length === 0 ? (
           <p className="text-sm text-muted-foreground">話題ブロックがありません。</p>
         ) : (

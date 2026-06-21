@@ -44,7 +44,7 @@ export function KpiCard({
         <CardTitle className="text-xs font-normal text-muted-foreground">{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-1">
-        <p className="text-2xl font-semibold tabular-nums tracking-tight">{value}</p>
+        <p className="text-2xl font-semibold tabular-nums tracking-tight whitespace-pre-line">{value}</p>
         {description ? (
           <p className="text-xs text-muted-foreground">{description}</p>
         ) : null}

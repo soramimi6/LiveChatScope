@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import {
+  DisplayFilterActionsProvider,
+  type DisplayFilterActions,
+} from "@/components/display-filter-actions-context";
 import { GlobalFilterBar } from "@/components/global-filter-bar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,6 +26,10 @@ import {
   type VideoMetaResponse,
 } from "@/lib/api";
 import { formatSeconds } from "@/lib/format";
+import {
+  formatAnalysisStatusLabel,
+  formatFetchStatusLabel,
+} from "@/lib/job-status";
 
 const TABS = [
   { id: "summary", label: "サマリー" },
@@ -49,6 +57,9 @@ export function VideoDashboard() {
     DEFAULT_DISPLAY_FILTER,
   );
   const [refreshKey, setRefreshKey] = useState(0);
+  const [filterActions, setFilterActions] = useState<DisplayFilterActions | null>(
+    null,
+  );
 
   const refreshMeta = useCallback(() => {
     getVideo(videoId)
@@ -85,6 +96,10 @@ export function VideoDashboard() {
     [refreshMeta],
   );
 
+  const handleFilterActionsReady = useCallback((actions: DisplayFilterActions) => {
+    setFilterActions(actions);
+  }, []);
+
   const headerSubtitle = [
     meta?.channel_name,
     meta?.duration_seconds != null ? formatSeconds(meta.duration_seconds) : null,
@@ -99,17 +114,22 @@ export function VideoDashboard() {
     <div className="flex min-h-full flex-col">
       <SiteHeader
         title={meta?.title ?? `動画 ${videoId}`}
+        videoId={videoId}
         subtitle={headerSubtitle}
       />
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary">メッセージ {meta?.message_count?.toLocaleString() ?? "—"}</Badge>
-            <Badge variant="outline">取得: {meta?.fetch_status ?? "—"}</Badge>
+            <Badge variant="outline">
+              取得: {formatFetchStatusLabel(meta?.fetch_status)}
+            </Badge>
             {meta?.analysis_status === "partial" ? (
               <PartialAnalysisBadge />
             ) : (
-              <Badge variant="outline">分析: {analysisStatus}</Badge>
+              <Badge variant="outline">
+                分析: {formatAnalysisStatusLabel(analysisStatus)}
+              </Badge>
             )}
           </div>
           <ExportMenu videoId={videoId} analysisStatus={analysisStatus} />
@@ -121,25 +141,33 @@ export function VideoDashboard() {
           analysisStatus={analysisStatus}
           onRefilterStart={handleRefilterStart}
           onRefilterComplete={handleRefilterComplete}
+          onActionsReady={handleFilterActionsReady}
         />
 
+        <DisplayFilterActionsProvider value={filterActions}>
         <Tabs
           value={activeTab}
           onValueChange={(value) => router.push(`/videos/${videoId}?tab=${value}`)}
         >
-          <TabsList className="mb-6 flex h-auto flex-wrap justify-start gap-1">
-            {TABS.map((tab) => (
-              <TabsTrigger key={tab.id} value={tab.id}>
-                {tab.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <div
+            aria-label="分析タブ"
+            className="sticky top-0 z-20 -mx-4 mb-6 border-b border-border/70 bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/85"
+          >
+            <TabsList variant="nav" className="w-full">
+              {TABS.map((tab) => (
+                <TabsTrigger key={tab.id} value={tab.id}>
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
 
           <TabsContent value="summary">
             <SummaryTab
               videoId={videoId}
               durationSeconds={meta?.duration_seconds}
               refreshKey={refreshKey}
+              refilterPending={isRefilterRunning}
             />
           </TabsContent>
           <TabsContent value="topics">
@@ -147,6 +175,7 @@ export function VideoDashboard() {
               videoId={videoId}
               durationSeconds={meta?.duration_seconds}
               refreshKey={refreshKey}
+              refilterPending={isRefilterRunning}
             />
           </TabsContent>
           <TabsContent value="highlights">
@@ -163,12 +192,14 @@ export function VideoDashboard() {
               videoId={videoId}
               durationSeconds={meta?.duration_seconds}
               refreshKey={refreshKey}
+              refilterPending={isRefilterRunning}
             />
           </TabsContent>
           <TabsContent value="search">
             <SearchTab videoId={videoId} />
           </TabsContent>
         </Tabs>
+        </DisplayFilterActionsProvider>
       </main>
       <DisclaimerFooter />
     </div>

@@ -10,6 +10,7 @@ import {
   getAuthorProfileWithFallback,
   type AuthorProfileResponse,
 } from "@/lib/api/community";
+import { formatSuperChatTotals } from "@/lib/topic-super-chat";
 
 type AuthorProfileSheetProps = {
   videoId: string;
@@ -18,15 +19,6 @@ type AuthorProfileSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
-
-function formatSuperChatTotals(
-  totals: AuthorProfileResponse["super_chat_total"],
-): string {
-  if (totals.length === 0) return "—";
-  return totals
-    .map((row) => `${row.amount.toLocaleString()} ${row.currency}（${row.count}件）`)
-    .join(" / ");
-}
 
 function channelProfileUrl(authorId: string): string | null {
   if (authorId.startsWith("UC") && !authorId.startsWith("unknown:")) {
@@ -158,7 +150,9 @@ export function AuthorProfileSheet({
 
           <section className="space-y-2">
             <h3 className="text-sm font-medium">スパチャ</h3>
-            <p className="text-sm">{formatSuperChatTotals(profile.super_chat_total)}</p>
+            <p className="whitespace-pre-line text-sm">
+              {formatSuperChatTotals(profile.super_chat_total)}
+            </p>
           </section>
 
           {profile.membership_registration || profile.membership_gift ? (

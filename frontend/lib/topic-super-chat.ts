@@ -10,7 +10,7 @@ export function formatSuperChatTotals(totals: SuperChatTotal[]): string {
   if (totals.length === 0) return "—";
   return totals
     .map((t) => `${t.amount.toLocaleString()} ${t.currency}（${t.count}件）`)
-    .join(" / ");
+    .join("\n");
 }
 
 export function rankTopicsBySuperChat(
