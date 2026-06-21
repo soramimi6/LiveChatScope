@@ -76,6 +76,26 @@ def test_post_refilter_returns_202_and_persists_filter(client, monkeypatch):
     assert json.loads(saved["display_filter_json"]) == payload["display_filter"]
 
 
+def test_post_refilter_applies_ng_keywords(client, monkeypatch):
+    db_path = settings.database_path
+    _insert_complete_video(db_path)
+    monkeypatch.setattr("app.api.analysis.run_refilter_pipeline", lambda _vid: None)
+
+    payload = {
+        "display_filter": {
+            "exclude_stamp_only": False,
+            "exclude_ng_keywords": True,
+            "ng_keywords": ["spam"],
+            "excluded_author_ids": [],
+        }
+    }
+    response = client.post("/api/v1/videos/vid1/analysis/refilter", json=payload)
+    assert response.status_code == 202
+
+    saved = _read_display_filter(db_path)
+    assert json.loads(saved["display_filter_json"])["ng_keywords"] == ["spam"]
+
+
 def test_post_refilter_returns_409_when_already_running(client):
     db_path = settings.database_path
     _insert_complete_video(db_path)

@@ -107,7 +107,7 @@ export function postAnalysisRefilter(videoId: string, filter: DisplayFilter) {
     `/api/v1/videos/${videoId}/analysis/refilter`,
     {
       method: "POST",
-      body: JSON.stringify(filter),
+      body: JSON.stringify({ display_filter: filter }),
     },
   );
 }
