@@ -11,10 +11,9 @@
 
 | ルール | 内容 |
 |--------|------|
-| **実装** | 本メモの項目は **明示指示があるまで実装しない**（UX-21 ファイル名のみ例外で完了） |
-| **更新** | feedback 受領 → 本メモ追記 → 必要なら「未決事項」に質問を追加 |
-| **精度** | 「現状」列は可能な限り **ファイル・設定値・DB** を根拠に記載 |
-| **ユーザー向け説明** | 質問・報告時は **経緯・背景** を含め平易に。略語（スパチャ、UC 等）は **なるべく使わず** 正式名称で書く |
+| **進捗** | 完了・次工程は **[工程進捗.md](工程進捗.md)** を正とする |
+| **実装** | タスク分解は [UX実施計画.md](UX実施計画.md)。本書 §3 が backlog 索引 |
+| **更新** | feedback 受領 → 本メモ追記 → 必要なら §1「残未決」に質問を追加 |
 
 ### 状態ラベル
 
@@ -65,22 +64,18 @@
 
 ---
 
-## 2. 実装との差分（コード照合 2026-06-21）
+## 2. 未解消ギャップ（コード照合 2026-06-21）
 
-設計ドキュメントと現行コードが一致していない点。改修時の前提として参照。
+Phase 0〜3 で解消済みの項目は [工程進捗.md §2](工程進捗.md) を参照。以下は **Phase 4 以降** の残件のみ。
 
-| 項目 | 設計・期待 | 現行実装 | 影響 UX |
-|------|-----------|----------|---------|
-| `analysis_status=partial` | Phase A のみ完了（[アーキテクチャ.md](アーキテクチャ.md)） | Pipeline は常に `complete` で終了（`partial` をセットするコードなし） | `PartialAnalysisBadge` は実質未使用 |
-| 進捗 → 結果遷移 | 分析完了待ち（[E2E手順.md](E2E手順.md)） | `fetch_status=fetched` で即 `/videos/` へ（`analyze/…/page.tsx` L33–35） | 分析 `running` 中に結果画面へ行き API 409 の可能性 |
-| 動画メタ | タイトル・チャンネル・尺 | ✅ `video_metadata.py` + `fetch_worker.py` で保存（G-01）。取得直後に UPDATE、尺 null 時は messages から fallback | ヘッダにタイトル・尺表示可能 |
-| `/summary` 件数上限 | `analysis_defaults.json` stage7: keywords **10**, topics preview **6**, highlights **5** | `analysis.py` が highlights / keywords / topic preview すべて **`LIMIT 5` 固定** | UX-07, UX-08 |
-| JSON export `authors` | — | `author_stats` 全行出力だが、Stage 1 は **Top 20 のみ** 保存（`author_top_n=20`） | 「全投稿者」と誤解しやすい |
-| markdown-summary | — | ✅ `export.py` が `stage8._build_markdown_summary` を再利用（G-04）。DL と Stage 8 キャッシュが一致 | — |
-| JSON export | — | ✅ `export_version: 2` で分析一式（messages, highlights, topics 等） | — |
-| 収益タブ CSV | スーパーチャット専用想定（UI 文脈） | ✅ スパチャ一覧 CSV（クライアント生成）。全ログは ExportMenu CSV | — |
-| `tokens` テーブル | Stage 4 中間データ | `delete_tokens_after_stage4: true` で **Stage 4 後削除** | 再トークナイズは messages からのみ |
-| `GET /videos/{id}` | — | `VideoMetaResponse` に **`source_url` なし**（DB カラムは存在） | UX-27 は API 拡張が必要 |
+| 項目 | 現状 | 関連 |
+|------|------|------|
+| `/topics` SC count | `analysis.py` で **常に 1** 固定 | **D2** |
+| 構成 TL | `/summary` preview **最大 5 件** のみ | UX-07 |
+| `partial` 状態 | Pipeline は常に `complete` | G-05 |
+| `GET /videos/{id}` | `source_url` 未返却 | UX-27 拡張余地 |
+| JSON `authors` | Stage 1 は Top 20 のみ保存 | ドキュメント注記で対応可 |
+| 50k+ 性能 | 2k のみ検証 | Phase B |
 
 ---
 

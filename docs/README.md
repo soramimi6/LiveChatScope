@@ -1,15 +1,17 @@
 # LiveChatScope — ドキュメント
 
-## 現在地
+## 現在地（2026-06-21）
 
 | 工程 | 状態 |
 |------|:----:|
 | POC（Phase A + A+） | ✅ 完了 — `master` @ `0335f0e` |
-| UX 改修の整理 | ✅ 完了 — [UX改修.md](UX改修.md) |
-| UX 改修の実装 | 🚧 着手 | Phase 0/1 Quick win 完了 |
-| Phase B（大規模性能・本番品質） | 📋 未着手 |
+| UX 改修 Phase 0〜3 | ✅ 実装済 — **PR #6〜#12 マージ待ち** |
+| **次工程** | **Phase 4 差別化 Must**（D2 → B1 → C1） |
+| Phase B（50k+ 性能） | 📋 未着手 |
 
-**日常作業は `dev` ブランチ。** 引き継ぎ・次タスク: [引き継ぎ.md](引き継ぎ.md) / 実装計画: [UX実施計画.md](UX実施計画.md)
+**入口**: 進捗・次タスク → [工程進捗.md](工程進捗.md) / 実装詳細 → [UX実施計画.md](UX実施計画.md) / 環境・PR 一覧 → [引き継ぎ.md](引き継ぎ.md)
+
+日常作業ブランチ: **`dev`**（UX 改修 PR は `cursor/*-10cc` 系列を #6 から順にマージ）
 
 ---
 
@@ -17,10 +19,12 @@
 
 | ファイル | 内容 |
 |----------|------|
-| [工程進捗.md](工程進捗.md) | **全体進捗**（POC 完了〜UX 改修フェーズ） |
-| [UX実施計画.md](UX実施計画.md) | UX 改修のフェーズ・並行レーン・工数 |
-| [引き継ぎ.md](引き継ぎ.md) | 作業引き継ぎ・環境構築 |
-| [UX改修.md](UX改修.md) | UI/UX 改修 backlog・方針決定（Q1–Q8） |
+| **[工程進捗.md](工程進捗.md)** | 全体進捗・完了整理・**Phase 4 作業予定** |
+| [UX実施計画.md](UX実施計画.md) | フェーズ定義・項目別タスク・既知バグ |
+| [UX改修.md](UX改修.md) | backlog 索引・方針 Q1–Q8・未解消ギャップ |
+| [引き継ぎ.md](引き継ぎ.md) | 環境構築・PR スタック・コード構成 |
+
+設計・仕様: [概要.md](概要.md) / [要件.md](要件.md) / [API仕様.md](API仕様.md) / [UI仕様.md](UI仕様.md) / [DBスキーマ.md](DBスキーマ.md)
 
 ---
 
@@ -36,8 +40,7 @@ uvicorn app.main:app --reload --port 8000
 cd frontend && cp .env.example .env.local && npm install && npm run dev
 ```
 
-- Frontend: http://localhost:3000
-- API: http://localhost:8000/docs
+- Frontend: http://localhost:3000 / API: http://localhost:8000/docs
 - E2E: `./scripts/e2e-api.sh "https://www.youtube.com/watch?v=VIDEO_ID"`
 
-詳細は [引き継ぎ.md §7](引き継ぎ.md) および [開発プロセス.md](開発プロセス.md)。
+詳細: [引き継ぎ.md §7](引き継ぎ.md)
