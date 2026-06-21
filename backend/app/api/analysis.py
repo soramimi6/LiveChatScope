@@ -9,6 +9,7 @@ from app.api.common import (
     utc_now_iso,
 )
 from app.services.analysis.params import load_analysis_defaults
+from app.services.super_chat_status import compute_super_chat_status
 from app.db import get_connection
 
 router = APIRouter(prefix="/videos", tags=["analysis"])
@@ -487,6 +488,8 @@ def get_super_chats_summary(video_id: str):
             (video_id,),
         ).fetchall()
 
+        status_fields = compute_super_chat_status(conn, video_id)
+
     timeline_map: dict[int, dict] = {}
     for b in bucket_rows:
         start = b["bucket_start_sec"]
@@ -504,6 +507,7 @@ def get_super_chats_summary(video_id: str):
         "video_id": video_id,
         "by_currency": by_currency,
         "timeline": timeline,
+        **status_fields,
     }
 
 
