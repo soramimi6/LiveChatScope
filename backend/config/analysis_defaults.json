@@ -2,7 +2,7 @@
   "version": 1,
   "global": {
     "density_bucket_sec": 60,
-    "min_token_length": 2,
+    "min_token_length": 4,
     "keyword_top_n_overall": 30,
     "keyword_top_n_timeline": 10,
     "topic_label_top_k": 3,
