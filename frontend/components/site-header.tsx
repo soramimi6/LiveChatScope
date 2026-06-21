@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 type SiteHeaderProps = {
   title?: string;
@@ -9,13 +10,26 @@ type SiteHeaderProps = {
 export function SiteHeader({ title, subtitle, linkedVideoId }: SiteHeaderProps) {
   return (
     <header className="border-b border-border/60 bg-background/80 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
-        <div className="min-w-0">
-          <Link href="/" className="text-lg font-semibold tracking-tight">
-            LiveChatScope
+      <div className="mx-auto flex max-w-7xl items-start justify-between gap-6 px-4 py-3.5 sm:px-6">
+        <div className="min-w-0 space-y-1">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2.5 rounded-sm transition-opacity hover:opacity-90"
+          >
+            <Image
+              src="/logo.svg"
+              alt=""
+              width={32}
+              height={32}
+              className="shrink-0"
+              priority
+            />
+            <span className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
+              LiveChatScope
+            </span>
           </Link>
           {linkedVideoId ? (
-            <p className="truncate text-sm text-muted-foreground">
+            <p className="truncate pl-[2.625rem] text-sm leading-snug text-muted-foreground">
               動画 ID:{" "}
               <a
                 href={`https://www.youtube.com/watch?v=${linkedVideoId}`}
@@ -27,19 +41,23 @@ export function SiteHeader({ title, subtitle, linkedVideoId }: SiteHeaderProps) 
               </a>
             </p>
           ) : title ? (
-            <p className="truncate text-sm text-muted-foreground">{title}</p>
+            <p className="truncate pl-[2.625rem] text-sm leading-snug text-muted-foreground">
+              {title}
+            </p>
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <p className="pl-[2.625rem] text-sm leading-snug text-muted-foreground">
               配信後のチャットを、振り返り資料に。
             </p>
           )}
           {subtitle ? (
-            <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
+            <p className="truncate pl-[2.625rem] text-xs leading-snug text-muted-foreground/80">
+              {subtitle}
+            </p>
           ) : null}
         </div>
         <Link
           href="/"
-          className="shrink-0 text-sm text-primary hover:underline"
+          className="shrink-0 pt-1.5 text-sm font-medium text-primary transition-colors hover:text-primary/80 hover:underline"
         >
           別の URL を分析
         </Link>
