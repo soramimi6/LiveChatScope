@@ -78,11 +78,15 @@ function HighlightsList({
           item.time_in_seconds,
           durationSeconds,
         );
+        const sampleMessages = item.context?.sample_messages.slice(0, 3) ?? [];
+        const topAuthors = item.context?.top_authors ?? [];
+
         return (
         <li
           key={item.rank}
-          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-3"
+          className="rounded-lg border px-3 py-3"
         >
+          <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0 space-y-1">
             <p className="font-medium tabular-nums">
               {item.rank}. {item.time_text}
@@ -108,6 +112,34 @@ function HighlightsList({
             </p>
           </div>
           <JumpLinkButton jumpUrl={item.jump_url} timeText={item.time_text} />
+          </div>
+
+          {sampleMessages.length > 0 ? (
+            <div className="mt-3 space-y-1.5 border-t pt-3">
+              <p className="text-xs font-medium text-muted-foreground">周辺コメント</p>
+              <ul className="space-y-1">
+                {sampleMessages.map((msg, index) => (
+                  <li
+                    key={`${item.rank}-${msg.time_in_seconds}-${index}`}
+                    className="text-xs text-muted-foreground"
+                  >
+                    <span className="font-medium text-foreground">{msg.author_name}</span>
+                    <span className="mx-1 tabular-nums">{msg.time_text}</span>
+                    <span>{msg.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {topAuthors.length > 0 ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              活発な投稿者:{" "}
+              {topAuthors
+                .map((author) => `${author.author_name}（${author.message_count}件）`)
+                .join("、")}
+            </p>
+          ) : null}
         </li>
         );
       })}

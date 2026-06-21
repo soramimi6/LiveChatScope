@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Info } from "lucide-react";
+import { Info, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import {
 import type { TopicBlock } from "@/lib/api";
 import { AuthorProfileSheet } from "@/components/author-profile-sheet";
 import { formatSeconds } from "@/lib/format";
+import { youtubeChannelUrl } from "@/lib/youtube-channel";
 
 type CommunityTabProps = {
   videoId: string;
@@ -58,25 +59,39 @@ function AuthorsTable({
             >
               <td className="px-3 py-2 tabular-nums text-muted-foreground">{item.rank}</td>
               <td className="px-3 py-2">
-                {onAuthorClick && item.author_id ? (
-                  <button
-                    type="button"
-                    className="text-left font-medium underline-offset-4 hover:underline"
-                    onClick={() =>
-                      onAuthorClick({
-                        author_id: item.author_id!,
-                        author_name: item.author_name,
-                        message_count: item.message_count,
-                        rank: item.rank,
-                        is_core_regular: false,
-                      })
-                    }
-                  >
-                    {item.author_name}
-                  </button>
-                ) : (
-                  item.author_name
-                )}
+                <div className="flex items-center gap-1.5">
+                  {onAuthorClick && item.author_id ? (
+                    <button
+                      type="button"
+                      className="text-left font-medium underline-offset-4 hover:underline"
+                      onClick={() =>
+                        onAuthorClick({
+                          author_id: item.author_id!,
+                          author_name: item.author_name,
+                          message_count: item.message_count,
+                          rank: item.rank,
+                          is_core_regular: false,
+                        })
+                      }
+                    >
+                      {item.author_name}
+                    </button>
+                  ) : (
+                    item.author_name
+                  )}
+                  {item.author_id && youtubeChannelUrl(item.author_id) ? (
+                    <a
+                      href={youtubeChannelUrl(item.author_id)!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label={`${item.author_name} の YouTube チャンネルを開く`}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <ExternalLink className="size-3.5" aria-hidden />
+                    </a>
+                  ) : null}
+                </div>
               </td>
               <td className="px-3 py-2 tabular-nums">{item.message_count.toLocaleString()}</td>
             </tr>
@@ -103,28 +118,44 @@ function CoreRegularSection({
         <p className="text-sm text-muted-foreground">常連コア層は検出されませんでした。</p>
       ) : (
         <div className="flex flex-wrap gap-2">
-          {coreAuthors.map((author) =>
-            onAuthorClick ? (
+          {coreAuthors.map((author) => {
+            const channelUrl = youtubeChannelUrl(author.author_id);
+            const content = (
+              <>
+                {author.author_name}
+                <span className="ml-1 text-muted-foreground">
+                  ({author.message_count.toLocaleString()}件)
+                </span>
+                {channelUrl ? (
+                  <a
+                    href={channelUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-1 inline-flex text-muted-foreground hover:text-foreground"
+                    aria-label={`${author.author_name} の YouTube チャンネルを開く`}
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <ExternalLink className="size-3" aria-hidden />
+                  </a>
+                ) : null}
+              </>
+            );
+
+            return onAuthorClick ? (
               <button
                 key={author.author_id}
                 type="button"
                 className="inline-flex items-center rounded-full border border-transparent bg-secondary px-2.5 py-0.5 text-sm text-secondary-foreground hover:bg-secondary/80"
                 onClick={() => onAuthorClick(author)}
               >
-                {author.author_name}
-                <span className="ml-1 text-muted-foreground">
-                  ({author.message_count.toLocaleString()}件)
-                </span>
+                {content}
               </button>
             ) : (
               <Badge key={author.author_id} variant="secondary" className="text-sm">
-                {author.author_name}
-                <span className="ml-1 text-muted-foreground">
-                  ({author.message_count.toLocaleString()}件)
-                </span>
+                {content}
               </Badge>
-            ),
-          )}
+            );
+          })}
         </div>
       )}
     </div>

@@ -7,6 +7,7 @@ export type MessageItem = {
   time_in_seconds: number;
   time_text: string;
   author_name: string;
+  author_id: string | null;
   message_type: string;
   text: string;
   jump_url: string;

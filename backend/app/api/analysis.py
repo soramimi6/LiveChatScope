@@ -333,33 +333,45 @@ def get_highlights(
     video_id: str,
     limit: int = Query(default=10, ge=1, le=100),
 ):
+    from app.services.highlight_context import build_highlight_context
+
     row = get_video_row(video_id)
     require_analysis_ready(row)
 
     items: list[dict] = []
     if is_analysis_complete(row["analysis_status"]):
         with get_connection() as conn:
-            items = [
-                {
-                    "rank": hl["rank"],
-                    "time_in_seconds": hl["time_in_seconds"],
-                    "time_text": format_time_text(hl["time_in_seconds"]),
-                    "score": hl["score"],
-                    "clip_start_sec": hl["clip_start_sec"],
-                    "clip_end_sec": hl["clip_end_sec"],
-                    "jump_url": jump_url(video_id, hl["time_in_seconds"]),
-                }
-                for hl in conn.execute(
-                    """
-                    SELECT rank, time_in_seconds, score, clip_start_sec, clip_end_sec
-                    FROM highlights
-                    WHERE video_id = ?
-                    ORDER BY rank ASC
-                    LIMIT ?
-                    """,
-                    (video_id, limit),
-                ).fetchall()
-            ]
+            highlight_rows = conn.execute(
+                """
+                SELECT rank, time_in_seconds, score, clip_start_sec, clip_end_sec
+                FROM highlights
+                WHERE video_id = ?
+                ORDER BY rank ASC
+                LIMIT ?
+                """,
+                (video_id, limit),
+            ).fetchall()
+
+            items = []
+            for hl in highlight_rows:
+                context = build_highlight_context(
+                    conn,
+                    video_id,
+                    int(hl["clip_start_sec"]),
+                    int(hl["clip_end_sec"]),
+                )
+                items.append(
+                    {
+                        "rank": hl["rank"],
+                        "time_in_seconds": hl["time_in_seconds"],
+                        "time_text": format_time_text(hl["time_in_seconds"]),
+                        "score": hl["score"],
+                        "clip_start_sec": hl["clip_start_sec"],
+                        "clip_end_sec": hl["clip_end_sec"],
+                        "jump_url": jump_url(video_id, hl["time_in_seconds"]),
+                        "context": context,
+                    }
+                )
 
     return {"video_id": video_id, "items": items}
 

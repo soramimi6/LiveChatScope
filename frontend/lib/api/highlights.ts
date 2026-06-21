@@ -54,6 +54,24 @@ export type DensityResponse = {
   average_count: number;
 };
 
+export type HighlightContextMessage = {
+  author_name: string;
+  text: string;
+  time_in_seconds: number;
+  time_text: string;
+};
+
+export type HighlightContextAuthor = {
+  author_id: string;
+  author_name: string;
+  message_count: number;
+};
+
+export type HighlightContext = {
+  sample_messages: HighlightContextMessage[];
+  top_authors: HighlightContextAuthor[];
+};
+
 export type HighlightItem = {
   rank: number;
   time_in_seconds: number;
@@ -62,6 +80,7 @@ export type HighlightItem = {
   clip_start_sec: number;
   clip_end_sec: number;
   jump_url: string;
+  context?: HighlightContext;
 };
 
 export type HighlightsResponse = {

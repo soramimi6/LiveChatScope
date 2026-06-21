@@ -76,6 +76,26 @@ export function getMockHighlights(videoId: string): HighlightsResponse {
       clip_start_sec: Math.max(0, Math.floor(peak.time_in_seconds) - CLIP_PADDING_SEC),
       clip_end_sec: Math.floor(peak.time_in_seconds) + CLIP_PADDING_SEC,
       jump_url: youtubeJumpUrl(videoId, peak.time_in_seconds),
+      context:
+        peak.rank <= 3
+          ? {
+              sample_messages: [
+                {
+                  author_name: "たろう",
+                  text: "うおおおお！",
+                  time_in_seconds: peak.time_in_seconds - 5,
+                  time_text: formatTimeText(peak.time_in_seconds - 5),
+                },
+              ],
+              top_authors: [
+                {
+                  author_id: "UC-mock-01",
+                  author_name: "たろう",
+                  message_count: 12,
+                },
+              ],
+            }
+          : undefined,
     })),
   };
 }
