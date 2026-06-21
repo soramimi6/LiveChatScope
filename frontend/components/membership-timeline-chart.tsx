@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { MembershipEventsResponse } from "@/lib/api/community";
+import type {
+  MembershipEventsResponse,
+  MembershipRegistrationItem,
+} from "@/lib/api/community";
 import { formatSeconds } from "@/lib/format";
 
 type MembershipTimelineChartProps = {
@@ -17,9 +20,7 @@ const PLOT_TOP = 16;
 const BASELINE_Y = 108;
 const STEM_TOP = 28;
 
-type TimedRegistration = {
-  author_id: string;
-  author_name: string;
+type TimedRegistration = MembershipRegistrationItem & {
   time_in_seconds: number;
   time_text: string;
 };

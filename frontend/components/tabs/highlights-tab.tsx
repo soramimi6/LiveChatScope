@@ -8,16 +8,17 @@ import {
   LineChart,
   ReferenceArea,
   ReferenceDot,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+import { ChartContainer } from "@/components/chart-container";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { JumpLinkButton } from "@/components/jump-link-button";
+import { DensityYScaleToggle } from "@/components/density-y-scale-toggle";
 import {
   getHighlightsTabDataWithFallback,
   getMarkdownClipsWithFallback,
@@ -26,6 +27,21 @@ import {
   type LowActivityItem,
 } from "@/lib/api/highlights";
 import { formatSeconds, formatStreamPosition } from "@/lib/format";
+import {
+  commentsPerMinute,
+  formatRatePerMin,
+} from "@/lib/density-chart";
+import {
+  densityRateForEmphasisScale,
+  densityRateForLogScale,
+  densityYScaleLabel,
+  formatYAxisTickForScale,
+  rechartsYAxisScale,
+  yAxisDomain,
+  yScaleSeriesKey,
+  type DensityYScale,
+} from "@/lib/density-y-scale";
+import { useDensityYScale } from "@/lib/use-density-y-scale";
 
 type HighlightsTabProps = {
   videoId: string;
@@ -35,12 +51,24 @@ type HighlightsTabProps = {
 type DensityChartPoint = {
   bucket_start_sec: number;
   count: number;
+  ratePerMin: number;
+  logRatePerMin: number;
+  emphRatePerMin: number;
   timeLabel: string;
 };
 
-function findBucketCount(
+function chartRateValue(point: DensityChartPoint, yScale: DensityYScale): number {
+  return yScaleSeriesKey(yScale, {
+    linear: point.ratePerMin,
+    log: point.logRatePerMin,
+    emphasis: point.emphRatePerMin,
+  });
+}
+
+function findBucketRatePerMin(
   buckets: DensityChartPoint[],
   timeSec: number,
+  yScale: DensityYScale,
 ): number {
   if (buckets.length === 0) return 0;
 
@@ -55,7 +83,7 @@ function findBucketCount(
     }
   }
 
-  return nearest.count;
+  return chartRateValue(nearest, yScale);
 }
 
 function HighlightsList({
@@ -196,13 +224,21 @@ function DensityChart({
   data,
   highlights,
   lowActivity,
-  averageCount,
+  averageRatePerMin,
+  yScale,
 }: {
   data: DensityChartPoint[];
   highlights: HighlightItem[];
   lowActivity: LowActivityItem[];
-  averageCount: number;
+  averageRatePerMin: number;
+  yScale: DensityYScale;
 }) {
+  const lineDataKey = yScaleSeriesKey(yScale, {
+    linear: "ratePerMin",
+    log: "logRatePerMin",
+    emphasis: "emphRatePerMin",
+  });
+
   if (data.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">密度データがありません。</p>
@@ -210,8 +246,8 @@ function DensityChart({
   }
 
   return (
-    <div className="h-72 w-full" aria-label="コメント密度グラフ">
-      <ResponsiveContainer width="100%" height="100%">
+    <div>
+      <ChartContainer className="h-72 w-full" aria-label="コメント密度グラフ">
         <LineChart data={data} margin={{ top: 12, right: 12, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
           <XAxis
@@ -220,10 +256,28 @@ function DensityChart({
             tick={{ fontSize: 11 }}
             minTickGap={32}
           />
-          <YAxis tick={{ fontSize: 11 }} width={40} />
+          <YAxis
+            scale={rechartsYAxisScale(yScale)}
+            domain={yAxisDomain(yScale, densityRateForLogScale(0))}
+            allowDataOverflow
+            tick={{ fontSize: 11 }}
+            width={48}
+            tickFormatter={(value) =>
+              formatYAxisTickForScale(Number(value), yScale)
+            }
+            label={{
+              value: "件/分",
+              angle: -90,
+              position: "insideLeft",
+              style: { fontSize: 11 },
+            }}
+          />
           <Tooltip
             labelFormatter={(value) => `開始 ${formatSeconds(Number(value))}`}
-            formatter={(value) => [`${value} 件`, "コメント数"]}
+            formatter={(_value, _name, item) => {
+              const payload = item.payload as DensityChartPoint;
+              return [formatRatePerMin(payload.ratePerMin), "コメント密度"];
+            }}
             contentStyle={{
               backgroundColor: "hsl(var(--card))",
               border: "1px solid hsl(var(--border))",
@@ -235,14 +289,13 @@ function DensityChart({
               key={`${segment.start_sec}-${segment.end_sec}`}
               x1={segment.start_sec}
               x2={segment.end_sec}
-              fill="hsl(var(--muted))"
-              fillOpacity={0.45}
+              fill="var(--chart-low-activity)"
               strokeOpacity={0}
             />
           ))}
           <Line
             type="monotone"
-            dataKey="count"
+            dataKey={lineDataKey}
             stroke="#3b82f6"
             strokeWidth={2}
             dot={false}
@@ -252,7 +305,7 @@ function DensityChart({
             <ReferenceDot
               key={item.rank}
               x={item.time_in_seconds}
-              y={findBucketCount(data, item.time_in_seconds)}
+              y={findBucketRatePerMin(data, item.time_in_seconds, yScale)}
               r={5}
               fill="#ef4444"
               stroke="#ffffff"
@@ -260,15 +313,17 @@ function DensityChart({
             />
           ))}
         </LineChart>
-      </ResponsiveContainer>
+      </ChartContainer>
       <p className="mt-2 text-xs text-muted-foreground">
-        平均密度 {averageCount.toFixed(1)} 件/バケット · 赤点 = 盛り上がり候補 · 灰色帯 = 低活動区間
+        平均密度 {averageRatePerMin.toFixed(1)} 件/分 · 縦軸 {densityYScaleLabel(yScale)} ·
+        赤点 = 盛り上がり候補 · 赤帯 = 低活動区間
       </p>
     </div>
   );
 }
 
 export function HighlightsTab({ videoId, durationSeconds }: HighlightsTabProps) {
+  const [yScale, setYScale] = useDensityYScale("highlights-density");
   const [data, setData] = useState<HighlightsTabData | null>(null);
   const [isMock, setIsMock] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -296,11 +351,23 @@ export function HighlightsTab({ videoId, durationSeconds }: HighlightsTabProps) 
 
   const chartData = useMemo<DensityChartPoint[]>(() => {
     if (!data) return [];
-    return data.density.buckets.map((bucket) => ({
-      bucket_start_sec: bucket.bucket_start_sec,
-      count: bucket.count,
-      timeLabel: formatSeconds(bucket.bucket_start_sec),
-    }));
+    const bucketSec = data.density.bucket_sec;
+    return data.density.buckets.map((bucket) => {
+      const ratePerMin = commentsPerMinute(bucket.count, bucketSec);
+      return {
+        bucket_start_sec: bucket.bucket_start_sec,
+        count: bucket.count,
+        ratePerMin,
+        logRatePerMin: densityRateForLogScale(ratePerMin),
+        emphRatePerMin: densityRateForEmphasisScale(ratePerMin),
+        timeLabel: formatSeconds(bucket.bucket_start_sec),
+      };
+    });
+  }, [data]);
+
+  const averageRatePerMin = useMemo(() => {
+    if (!data) return 0;
+    return commentsPerMinute(data.density.average_count, data.density.bucket_sec);
   }, [data]);
 
   const handleCopyMarkdown = async () => {
@@ -351,7 +418,10 @@ export function HighlightsTab({ videoId, durationSeconds }: HighlightsTabProps) 
 
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-          <CardTitle>コメント密度</CardTitle>
+          <div className="flex flex-wrap items-center gap-3">
+            <CardTitle>コメント密度</CardTitle>
+            <DensityYScaleToggle value={yScale} onChange={setYScale} />
+          </div>
           <Button variant="outline" size="sm" onClick={handleCopyMarkdown}>
             {copyState === "copied" ? (
               <Check data-icon="inline-start" />
@@ -370,7 +440,8 @@ export function HighlightsTab({ videoId, durationSeconds }: HighlightsTabProps) 
             data={chartData}
             highlights={data.highlights.items}
             lowActivity={data.lowActivity.items}
-            averageCount={data.density.average_count}
+            averageRatePerMin={averageRatePerMin}
+            yScale={yScale}
           />
         </CardContent>
       </Card>

@@ -24,6 +24,7 @@ export function JumpLinkButton({
       variant="outline"
       size={size}
       className={className}
+      nativeButton={false}
       render={
         <a
           href={jumpUrl}

@@ -165,6 +165,18 @@ export function buildMarkdownClipsLocal(
   return lines.join("\n");
 }
 
+export async function getLowActivityWithFallback(
+  videoId: string,
+): Promise<{ data: LowActivityResponse; isMock: boolean }> {
+  try {
+    const data = await getLowActivity(videoId);
+    return { data, isMock: false };
+  } catch {
+    const { getMockLowActivity } = await import("@/lib/mocks/highlights");
+    return { data: getMockLowActivity(videoId), isMock: true };
+  }
+}
+
 export async function getHighlightsTabDataWithFallback(
   videoId: string,
 ): Promise<{ data: HighlightsTabData; isMock: boolean }> {

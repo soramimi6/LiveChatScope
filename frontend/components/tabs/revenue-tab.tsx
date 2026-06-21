@@ -8,20 +8,26 @@ import {
   ComposedChart,
   Legend,
   Line,
-  ResponsiveContainer,
+  ReferenceArea,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+import { ChartContainer } from "@/components/chart-container";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DensityYScaleToggle } from "@/components/density-y-scale-toggle";
 import { KpiCard } from "@/components/kpi-card";
 import { JumpLinkButton } from "@/components/jump-link-button";
 import { TopicSuperChatRanking } from "@/components/topic-super-chat-ranking";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet } from "@/components/ui/sheet";
 import { getTopicsWithFallback, type TopicsResponse } from "@/lib/api";
+import {
+  getLowActivityWithFallback,
+  type LowActivityItem,
+} from "@/lib/api/highlights";
 import {
   buildThankYouCsv,
   downloadTextFile,
@@ -36,6 +42,25 @@ import {
 import { exportFilename } from "@/lib/export-filename";
 import { getMockSuperChats } from "@/lib/mocks/revenue";
 import { formatSeconds } from "@/lib/format";
+import {
+  commentsPerMinute,
+  formatRatePerMin,
+} from "@/lib/density-chart";
+import {
+  DENSITY_LOG_FLOOR,
+  SUPER_CHAT_AMOUNT_LOG_FLOOR,
+  densityRateForEmphasisScale,
+  densityRateForLogScale,
+  densityYScaleLabel,
+  formatYAxisTickForScale,
+  rechartsYAxisScale,
+  superChatAmountForEmphasisScale,
+  superChatAmountForLogScale,
+  yAxisDomain,
+  yScaleSeriesKey,
+  type DensityYScale,
+} from "@/lib/density-y-scale";
+import { useDensityYScale } from "@/lib/use-density-y-scale";
 
 type RevenueTabProps = {
   videoId: string;
@@ -51,14 +76,22 @@ function buildChartData(data: RevenueTabData) {
   const timelineMap = new Map(
     data.summary.timeline.map((bucket) => [bucket.bucket_start_sec, bucket]),
   );
+  const bucketSec = data.density.bucket_sec;
 
   return data.density.buckets.map((bucket) => {
     const sc = timelineMap.get(bucket.bucket_start_sec);
+    const density = commentsPerMinute(bucket.count, bucketSec);
+    const superChatAmount = sc?.amount_jpy ?? 0;
     return {
+      bucket_start_sec: bucket.bucket_start_sec,
       label: formatSeconds(bucket.bucket_start_sec),
-      density: bucket.count,
+      density,
+      logDensity: densityRateForLogScale(density),
+      emphDensity: densityRateForEmphasisScale(density),
       superChatCount: sc?.count ?? 0,
-      superChatAmount: sc?.amount_jpy ?? 0,
+      superChatAmount,
+      logSuperChatAmount: superChatAmountForLogScale(superChatAmount),
+      emphSuperChatAmount: superChatAmountForEmphasisScale(superChatAmount),
     };
   });
 }
@@ -170,8 +203,49 @@ function SuperChatCurrencySheet({
   );
 }
 
-function DensitySuperChatChart({ data }: { data: RevenueTabData }) {
+const SUPER_CHAT_MARKER_COLOR = "#f59e0b";
+
+function superChatChartPoint(payload: unknown): { superChatAmount: number } | null {
+  if (!payload || typeof payload !== "object") return null;
+  const amount = (payload as { superChatAmount?: unknown }).superChatAmount;
+  return typeof amount === "number" ? { superChatAmount: amount } : null;
+}
+
+function SuperChatMarkerDot(props: {
+  cx?: number;
+  cy?: number;
+  payload?: unknown;
+}) {
+  const { cx, cy, payload } = props;
+  const point = superChatChartPoint(payload);
+  if (cx == null || cy == null || !point || point.superChatAmount <= 0) {
+    return null;
+  }
+  return <circle cx={cx} cy={cy} r={3} fill={SUPER_CHAT_MARKER_COLOR} />;
+}
+
+function DensitySuperChatChart({
+  data,
+  densityYScale,
+  superChatYScale,
+  lowActivity,
+}: {
+  data: RevenueTabData;
+  densityYScale: DensityYScale;
+  superChatYScale: DensityYScale;
+  lowActivity: LowActivityItem[];
+}) {
   const chartData = useMemo(() => buildChartData(data), [data]);
+  const densityDataKey = yScaleSeriesKey(densityYScale, {
+    linear: "density",
+    log: "logDensity",
+    emphasis: "emphDensity",
+  });
+  const superChatDataKey = yScaleSeriesKey(superChatYScale, {
+    linear: "superChatAmount",
+    log: "logSuperChatAmount",
+    emphasis: "emphSuperChatAmount",
+  });
 
   if (chartData.length === 0) {
     return (
@@ -180,22 +254,29 @@ function DensitySuperChatChart({ data }: { data: RevenueTabData }) {
   }
 
   return (
-    <div className="h-72 w-full">
-      <ResponsiveContainer width="100%" height="100%">
+    <div>
+      <ChartContainer className="h-72 w-full">
         <ComposedChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
           <XAxis
-            dataKey="label"
+            dataKey="bucket_start_sec"
+            tickFormatter={(value) => formatSeconds(Number(value))}
             tick={{ fontSize: 10 }}
             interval="preserveStartEnd"
             minTickGap={32}
           />
           <YAxis
             yAxisId="density"
+            scale={rechartsYAxisScale(densityYScale)}
+            domain={yAxisDomain(densityYScale, DENSITY_LOG_FLOOR)}
+            allowDataOverflow
             tick={{ fontSize: 11 }}
-            width={40}
+            width={48}
+            tickFormatter={(value) =>
+              formatYAxisTickForScale(Number(value), densityYScale)
+            }
             label={{
-              value: "密度",
+              value: "件/分",
               angle: -90,
               position: "insideLeft",
               style: { fontSize: 11 },
@@ -204,8 +285,14 @@ function DensitySuperChatChart({ data }: { data: RevenueTabData }) {
           <YAxis
             yAxisId="amount"
             orientation="right"
+            scale={rechartsYAxisScale(superChatYScale)}
+            domain={yAxisDomain(superChatYScale, SUPER_CHAT_AMOUNT_LOG_FLOOR)}
+            allowDataOverflow
             tick={{ fontSize: 11 }}
             width={48}
+            tickFormatter={(value) =>
+              formatYAxisTickForScale(Number(value), superChatYScale)
+            }
             label={{
               value: "スパチャ (JPY)",
               angle: 90,
@@ -219,18 +306,41 @@ function DensitySuperChatChart({ data }: { data: RevenueTabData }) {
               border: "1px solid hsl(var(--border))",
               borderRadius: "8px",
             }}
-            formatter={(value, name) => {
-              if (name === "density") return [`${value} 件/分`, "コメント密度"];
-              if (name === "superChatAmount") {
-                return [`${Number(value).toLocaleString()} JPY`, "スパチャ金額"];
+            labelFormatter={(value) => `開始 ${formatSeconds(Number(value))}`}
+            formatter={(_value, name, item) => {
+              const payload = item.payload as {
+                density: number;
+                superChatAmount: number;
+                superChatCount: number;
+              };
+              if (name === "コメント密度") {
+                return [formatRatePerMin(payload.density), "コメント密度"];
               }
-              return [value, name];
+              if (name === "スパチャ金額") {
+                return [
+                  `${payload.superChatAmount.toLocaleString()} JPY`,
+                  "スパチャ金額",
+                ];
+              }
+              if (name === "スパチャ件数") {
+                return [`${payload.superChatCount} 件`, "スパチャ件数"];
+              }
+              return [_value, name];
             }}
           />
           <Legend />
+          {lowActivity.map((segment) => (
+            <ReferenceArea
+              key={`${segment.start_sec}-${segment.end_sec}`}
+              x1={segment.start_sec}
+              x2={segment.end_sec}
+              fill="var(--chart-low-activity)"
+              strokeOpacity={0}
+            />
+          ))}
           <Bar
             yAxisId="density"
-            dataKey="density"
+            dataKey={densityDataKey}
             name="コメント密度"
             fill="#3b82f6"
             radius={[2, 2, 0, 0]}
@@ -239,14 +349,19 @@ function DensitySuperChatChart({ data }: { data: RevenueTabData }) {
           <Line
             yAxisId="amount"
             type="monotone"
-            dataKey="superChatAmount"
+            dataKey={superChatDataKey}
             name="スパチャ金額"
-            stroke="#f59e0b"
-            strokeWidth={2}
-            dot={{ r: 3, fill: "#f59e0b" }}
+            stroke="none"
+            strokeWidth={0}
+            dot={SuperChatMarkerDot}
+            activeDot={SuperChatMarkerDot}
           />
         </ComposedChart>
-      </ResponsiveContainer>
+      </ChartContainer>
+      <p className="mt-2 text-xs text-muted-foreground">
+        密度 縦軸 {densityYScaleLabel(densityYScale)} · スパチャ 縦軸{" "}
+        {densityYScaleLabel(superChatYScale)} · 赤帯 = 低活動区間
+      </p>
     </div>
   );
 }
@@ -501,8 +616,11 @@ function SuperChatEmptyState({
 }
 
 export function RevenueTab({ videoId }: RevenueTabProps) {
+  const [densityYScale, setDensityYScale] = useDensityYScale("revenue-density");
+  const [superChatYScale, setSuperChatYScale] = useDensityYScale("revenue-superchat");
   const [data, setData] = useState<RevenueTabData | null>(null);
   const [topics, setTopics] = useState<TopicsResponse | null>(null);
+  const [lowActivity, setLowActivity] = useState<LowActivityItem[]>([]);
   const [listItems, setListItems] = useState<SuperChatItem[]>([]);
   const [page, setPage] = useState(1);
   const [listTotal, setListTotal] = useState(0);
@@ -518,16 +636,19 @@ export function RevenueTab({ videoId }: RevenueTabProps) {
       setLoading(true);
       setPage(1);
       try {
-        const [{ data: tabData, isMock: mock }, topicsResult] = await Promise.all([
-          getRevenueTabDataWithFallback(videoId),
-          getTopicsWithFallback(videoId),
-        ]);
+        const [{ data: tabData, isMock: mock }, topicsResult, lowActivityResult] =
+          await Promise.all([
+            getRevenueTabDataWithFallback(videoId),
+            getTopicsWithFallback(videoId),
+            getLowActivityWithFallback(videoId),
+          ]);
         if (!cancelled) {
           setData(tabData);
           setTopics(topicsResult.data);
+          setLowActivity(lowActivityResult.data.items);
           setListItems(tabData.superChats.items);
           setListTotal(tabData.superChats.pagination.total);
-          setIsMock(mock || topicsResult.isMock);
+          setIsMock(mock || topicsResult.isMock || lowActivityResult.isMock);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -640,14 +761,42 @@ export function RevenueTab({ videoId }: RevenueTabProps) {
         isMock={isMock}
       />
 
-      {topics ? <TopicSuperChatRanking blocks={topics.items} /> : null}
+      {topics ? (
+        <TopicSuperChatRanking
+          blocks={topics.items}
+          interactiveLabels={!isMock}
+        />
+      ) : null}
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
           <CardTitle>密度 × スパチャ</CardTitle>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">密度</span>
+              <DensityYScaleToggle
+                value={densityYScale}
+                onChange={setDensityYScale}
+                ariaLabel="密度の縦軸スケール"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">スパチャ</span>
+              <DensityYScaleToggle
+                value={superChatYScale}
+                onChange={setSuperChatYScale}
+                ariaLabel="スパチャ金額の縦軸スケール"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <DensitySuperChatChart data={data} />
+          <DensitySuperChatChart
+            data={data}
+            densityYScale={densityYScale}
+            superChatYScale={superChatYScale}
+            lowActivity={lowActivity}
+          />
         </CardContent>
       </Card>
 
