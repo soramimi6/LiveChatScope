@@ -63,7 +63,7 @@ def search_messages(
                 WHERE {where_clause}
             """
             select_sql = f"""
-                SELECT m.message_id, m.time_in_seconds, m.author_name,
+                SELECT m.message_id, m.time_in_seconds, m.author_id, m.author_name,
                        m.message_type, m.text
                 FROM messages m
                 JOIN messages_fts ON messages_fts.rowid = m.id
@@ -78,7 +78,7 @@ def search_messages(
                 WHERE {where_clause}
             """
             select_sql = f"""
-                SELECT m.message_id, m.time_in_seconds, m.author_name,
+                SELECT m.message_id, m.time_in_seconds, m.author_id, m.author_name,
                        m.message_type, m.text
                 FROM messages m
                 WHERE {where_clause}
@@ -98,6 +98,7 @@ def search_messages(
                 "time_in_seconds": time_sec,
                 "time_text": format_time_text(time_sec),
                 "author_name": msg["author_name"],
+                "author_id": msg["author_id"],
                 "message_type": msg["message_type"],
                 "text": msg["text"],
                 "jump_url": jump_url(video_id, time_sec),

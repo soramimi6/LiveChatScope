@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { JumpLinkButton } from "@/components/jump-link-button";
+import { AuthorProfileSheet } from "@/components/author-profile-sheet";
 import {
   searchMessagesWithFallback,
   type MessageItem,
@@ -58,7 +59,13 @@ function MessageTypeBadge({ messageType }: { messageType: string }) {
   );
 }
 
-function ResultsTable({ items }: { items: MessageItem[] }) {
+function ResultsTable({
+  items,
+  onAuthorClick,
+}: {
+  items: MessageItem[];
+  onAuthorClick?: (author: Pick<MessageItem, "author_id" | "author_name">) => void;
+}) {
   if (items.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -86,7 +93,22 @@ function ResultsTable({ items }: { items: MessageItem[] }) {
                 {item.time_text}
               </td>
               <td className="px-3 py-2 max-w-[10rem] truncate" title={item.author_name}>
-                {item.author_name}
+                {onAuthorClick && item.author_id ? (
+                  <button
+                    type="button"
+                    className="max-w-full truncate text-left font-medium underline-offset-4 hover:underline"
+                    onClick={() =>
+                      onAuthorClick({
+                        author_id: item.author_id,
+                        author_name: item.author_name,
+                      })
+                    }
+                  >
+                    {item.author_name}
+                  </button>
+                ) : (
+                  item.author_name
+                )}
               </td>
               <td className="px-3 py-2">
                 <MessageTypeBadge messageType={item.message_type} />
@@ -175,6 +197,16 @@ export function SearchTab({ videoId }: SearchTabProps) {
   const [isMock, setIsMock] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedAuthorId, setSelectedAuthorId] = useState<string | null>(null);
+  const [selectedAuthorName, setSelectedAuthorName] = useState<string | undefined>();
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  const openAuthorProfile = (author: Pick<MessageItem, "author_id" | "author_name">) => {
+    if (!author.author_id) return;
+    setSelectedAuthorId(author.author_id);
+    setSelectedAuthorName(author.author_name);
+    setProfileOpen(true);
+  };
 
   const loadResults = useCallback(async () => {
     setLoading(true);
@@ -313,7 +345,7 @@ export function SearchTab({ videoId }: SearchTabProps) {
             </div>
           ) : (
             <>
-              <ResultsTable items={items} />
+              <ResultsTable items={items} onAuthorClick={openAuthorProfile} />
               <PaginationBar
                 pagination={pagination}
                 onPageChange={setPage}
@@ -322,6 +354,14 @@ export function SearchTab({ videoId }: SearchTabProps) {
           )}
         </CardContent>
       </Card>
+
+      <AuthorProfileSheet
+        videoId={videoId}
+        authorId={selectedAuthorId}
+        authorName={selectedAuthorName}
+        open={profileOpen}
+        onOpenChange={setProfileOpen}
+      />
     </div>
   );
 }

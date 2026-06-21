@@ -2,11 +2,11 @@ import { formatSeconds, youtubeJumpUrl } from "@/lib/format";
 import type { MessageItem, MessagesResponse } from "@/lib/api/search";
 
 const MOCK_AUTHORS = [
-  "視聴者A",
-  "視聴者B",
-  "常連太郎",
-  "初見さん",
-  "スパチャ王",
+  { name: "視聴者A", author_id: "UCmock000001" },
+  { name: "視聴者B", author_id: "UCmock000002" },
+  { name: "常連太郎", author_id: "UCmock000003" },
+  { name: "初見さん", author_id: "unknown:guest" },
+  { name: "スパチャ王", author_id: "UCmock000005" },
 ] as const;
 
 const MOCK_TEXTS = [
@@ -47,7 +47,7 @@ function buildMockMessages(videoId: string): MessageItem[] {
 
   for (let i = 0; i < 120; i++) {
     const timeInSeconds = i * 45 + (i % 7) * 3;
-    const author = MOCK_AUTHORS[i % MOCK_AUTHORS.length];
+    const authorEntry = MOCK_AUTHORS[i % MOCK_AUTHORS.length];
     const messageType = MESSAGE_TYPES[i % MESSAGE_TYPES.length];
     const baseText = MOCK_TEXTS[i % MOCK_TEXTS.length];
     const text =
@@ -61,7 +61,8 @@ function buildMockMessages(videoId: string): MessageItem[] {
       message_id: `mock-msg-${i}`,
       time_in_seconds: timeInSeconds,
       time_text: formatSeconds(timeInSeconds),
-      author_name: author,
+      author_name: authorEntry.name,
+      author_id: authorEntry.author_id,
       message_type: messageType,
       text,
       jump_url: youtubeJumpUrl(videoId, timeInSeconds),
