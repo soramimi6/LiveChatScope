@@ -109,7 +109,7 @@
 - [x] 性能: P-02〜P-05 PASS（~2k msg 規模）
   - P-01 全パイプライン ~15s（2k msg 規模）
   - 50k+ msg 規模の P-01 は未実施 → Phase B
-- [x] `dev` → `master` マージ（第一弾完成 — `25b2d20`）
+- [x] `dev` → `master` マージ（第一弾完成 — `master` @ `0335f0e`）
 
 ---
 
@@ -130,6 +130,6 @@
 | 設計 1–6 | 6 | 6 | |
 | Backend 実装 | 5 | 5 | W1–W4 + W3 |
 | Frontend 実装 | 9 | 9 | W5 + 全タブ + Export |
-| 統合・リリース | 3 | 3 | 第一弾完成（`master` @ `25b2d20`） |
+| 統合・リリース | 3 | 3 | 第一弾完成（`master` @ `0335f0e`） |
 
-**次**: Phase B（50k+ 性能・UI polish）。詳細は [handoff-current-state.md](handoff-current-state.md)
+**次**: UX polish（[ux-improvement-memo.md](ux-improvement-memo.md)）+ Phase B。詳細は [handoff-current-state.md](handoff-current-state.md)
