@@ -115,7 +115,7 @@
 
 ## C. 第一弾完成後（スコープ外）
 
-- [ ] UI / UX の本格改善
+- [ ] UI / UX の本格改善 — 具体案: [ux-improvement-memo.md](ux-improvement-memo.md)
 - [ ] 英語対応（i18n）
 - [ ] Phase B（中断再開・本番品質）
 - [ ] Phase D（公開サービス）

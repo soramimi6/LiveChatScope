@@ -231,6 +231,7 @@ npm run dev
 | [architecture.md](architecture.md) | Pipeline Stage 0–8 |
 | [api-spec.md](api-spec.md) | REST API |
 | [ui-spec.md](ui-spec.md) | 全タブ UI |
+| [ux-improvement-memo.md](ux-improvement-memo.md) | **UI/UX 改修メモ**（実画面フィードバック） |
 
 ---
 
