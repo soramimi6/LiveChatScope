@@ -1,0 +1,31 @@
+---
+description: Release stages (POC → personal → beta → production) and git branch promotion rules
+alwaysApply: true
+---
+
+# Release stages & git branches
+
+LiveChatScope progresses in four stages. Match work and merges to the **current target stage**.
+
+## Stages
+
+| Stage | Branch | Users | Purpose |
+|-------|--------|-------|---------|
+| POC | *(tag `poc/complete`)* | Dev only | Feature proof — **done** |
+| Personal | `personal` | Developer self | Daily personal use, stable enough to rely on |
+| Beta | `beta` | Invited outsiders | Limited trial; auth + data isolation required |
+| Production | `master` | General public | SNS/open access; legal + ops ready |
+
+## Git flow
+
+```
+feat/* | fix/* | cursor/*  →  merge into dev
+dev                        →  promote to personal when personal-use ready
+personal                   →  promote to beta when limited-public ready
+beta                       →  promote to master when general-public ready
+```
+
+- **Always** branch work from `dev`, not from `personal` / `beta` / `master`.
+- Do **not** merge `dev` → `beta` or `master` without explicit user approval for stage promotion.
+- `master` is general-public production only — not the day-to-day integration branch.
+- See `docs/進捗.md` §1–§4 for current stage, promotion criteria, and backlog by stage.
