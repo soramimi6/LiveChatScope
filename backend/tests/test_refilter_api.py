@@ -73,7 +73,11 @@ def test_post_refilter_returns_202_and_persists_filter(client, monkeypatch):
 
     saved = _read_display_filter(db_path)
     assert saved["analysis_status"] == "running"
-    assert json.loads(saved["display_filter_json"]) == payload["display_filter"]
+    assert json.loads(saved["display_filter_json"]) == {
+        **payload["display_filter"],
+        "auto_ng_keywords": [],
+        "dismissed_auto_ng_keywords": [],
+    }
 
 
 def test_post_refilter_applies_ng_keywords(client, monkeypatch):
