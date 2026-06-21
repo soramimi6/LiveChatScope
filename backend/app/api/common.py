@@ -18,7 +18,7 @@ def format_time_text(seconds: float) -> str:
 
 
 def jump_url(video_id: str, seconds: float) -> str:
-    return f"https://www.youtube.com/watch?v={video_id}&t={math.floor(seconds)}s"
+    return f"https://www.youtube.com/watch?v={video_id}&t={max(0, math.floor(seconds))}s"
 
 
 def get_video_row(video_id: str):

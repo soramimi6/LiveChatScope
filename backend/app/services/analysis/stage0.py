@@ -10,6 +10,7 @@ def run_stage0_normalize(conn: sqlite3.Connection, video_id: str, params: dict) 
     """Post-fetch normalization pass: message types, empty text, FTS rebuild."""
     stage0 = params.get("stage0", {})
     skip_missing_time = bool(stage0.get("skip_missing_time", True))
+    skip_negative_time = bool(stage0.get("skip_negative_time", True))
 
     for alias, canonical in MESSAGE_TYPE_ALIASES.items():
         conn.execute(
@@ -35,6 +36,15 @@ def run_stage0_normalize(conn: sqlite3.Connection, video_id: str, params: dict) 
             """
             DELETE FROM messages
             WHERE video_id = ? AND time_in_seconds IS NULL
+            """,
+            (video_id,),
+        )
+
+    if skip_negative_time:
+        conn.execute(
+            """
+            DELETE FROM messages
+            WHERE video_id = ? AND time_in_seconds < 0
             """,
             (video_id,),
         )

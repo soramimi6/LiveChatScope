@@ -74,6 +74,8 @@ def fetch_chat_replay(video_id: str, source_url: str) -> None:
                 continue
             if row["time_in_seconds"] is None:
                 continue
+            if row["time_in_seconds"] < 0:
+                continue
             batch.append(row)
             if len(batch) >= batch_size:
                 _insert_batch(batch)

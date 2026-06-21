@@ -11,6 +11,7 @@
   },
   "stage0": {
     "skip_missing_time": true,
+    "skip_negative_time": true,
     "super_chat_types": [
       "super_chat",
       "super_sticker",
