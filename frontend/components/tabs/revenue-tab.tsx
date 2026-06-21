@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Copy, Download, Info, Wallet } from "lucide-react";
+import { Copy, Download, Info, TriangleAlert, Wallet } from "lucide-react";
 import {
   Bar,
   CartesianGrid,
@@ -18,8 +18,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiCard } from "@/components/kpi-card";
 import { JumpLinkButton } from "@/components/jump-link-button";
+import { TopicSuperChatRanking } from "@/components/topic-super-chat-ranking";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getTopicsWithFallback, type TopicsResponse } from "@/lib/api";
 import {
+  buildThankYouCsv,
   downloadTextFile,
   getRevenueTabDataWithFallback,
   getSuperChats,
@@ -27,6 +30,7 @@ import {
   type ExportType,
   type RevenueTabData,
   type SuperChatItem,
+  type SuperChatStatus,
 } from "@/lib/api/revenue";
 import { exportFilename } from "@/lib/export-filename";
 import { getMockSuperChats } from "@/lib/mocks/revenue";
@@ -279,16 +283,17 @@ function ExportActions({
       setExporting(type);
       setFeedback(null);
       try {
-        const { content } = await getThankYouExportWithFallback(
-          videoId,
-          type,
-          allItems,
-        );
+        const content =
+          type === "csv"
+            ? buildThankYouCsv(allItems)
+            : (
+                await getThankYouExportWithFallback(videoId, type, allItems)
+              ).content;
         if (mode === "copy") {
           await navigator.clipboard.writeText(content);
           setFeedback(
             type === "csv"
-              ? "CSV をクリップボードにコピーしました"
+              ? "スパチャ CSV をクリップボードにコピーしました"
               : "Markdown をクリップボードにコピーしました",
           );
         } else {
@@ -298,7 +303,9 @@ function ExportActions({
             type === "csv" ? "text/csv;charset=utf-8" : "text/markdown;charset=utf-8",
           );
           setFeedback(
-            type === "csv" ? "CSV をダウンロードしました" : "Markdown をダウンロードしました",
+            type === "csv"
+              ? "スパチャ CSV をダウンロードしました"
+              : "Markdown をダウンロードしました",
           );
         }
       } catch {
@@ -312,24 +319,29 @@ function ExportActions({
 
   return (
     <div className="space-y-2">
+      <p className="text-xs text-muted-foreground">
+        スパチャ CSV はこのタブの一覧のみ。全チャットログはヘッダの CSV — チャットログのみから取得できます。
+      </p>
       <div className="flex flex-wrap gap-2">
         <Button
           variant="outline"
           size="sm"
           disabled={disabled || exporting !== null}
+          title="スーパーチャット一覧のみ（全チャットログではありません）"
           onClick={() => runExport("csv", "copy")}
         >
           <Copy data-icon="inline-start" />
-          CSV コピー
+          スパチャ CSV コピー
         </Button>
         <Button
           variant="outline"
           size="sm"
           disabled={disabled || exporting !== null}
+          title="スーパーチャット一覧のみ（全チャットログではありません）"
           onClick={() => runExport("csv", "download")}
         >
           <Download data-icon="inline-start" />
-          CSV ダウンロード
+          スパチャ CSV DL
         </Button>
         <Button
           variant="outline"
@@ -355,20 +367,57 @@ function ExportActions({
   );
 }
 
-function EmptyState() {
+const SUPER_CHAT_EMPTY_DEFAULTS: Record<
+  Exclude<SuperChatStatus, "present">,
+  { title: string; message: string }
+> = {
+  none_in_chat: {
+    title: "スーパーチャットはありませんでした",
+    message:
+      "この配信では Super Chat / Super Thanks のデータが検出されませんでした。",
+  },
+  amount_parse_failed: {
+    title: "金額情報を取得できませんでした",
+    message:
+      "スーパーチャットの金額情報を解析できませんでした。チャットログにスーパーチャットが含まれている場合は、形式の変更などが原因の可能性があります。",
+  },
+};
+
+function SuperChatEmptyState({
+  status,
+  message,
+}: {
+  status: Exclude<SuperChatStatus, "present">;
+  message?: string | null;
+}) {
+  const defaults = SUPER_CHAT_EMPTY_DEFAULTS[status];
+  const title = defaults.title;
+  const description = message ?? defaults.message;
+
+  if (status === "amount_parse_failed") {
+    return (
+      <Alert className="border-amber-500/40 bg-amber-500/5 text-amber-950 dark:text-amber-100">
+        <TriangleAlert className="text-amber-600 dark:text-amber-400" />
+        <AlertTitle>{title}</AlertTitle>
+        <AlertDescription className="text-amber-900/80 dark:text-amber-100/80">
+          {description}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-6 py-16 text-center">
       <Wallet className="size-10 text-muted-foreground" aria-hidden />
-      <p className="text-lg font-medium">スパチャはありませんでした</p>
-      <p className="max-w-md text-sm text-muted-foreground">
-        この配信では Super Chat / Super Thanks のデータが検出されませんでした。
-      </p>
+      <p className="text-lg font-medium">{title}</p>
+      <p className="max-w-md text-sm text-muted-foreground">{description}</p>
     </div>
   );
 }
 
 export function RevenueTab({ videoId }: RevenueTabProps) {
   const [data, setData] = useState<RevenueTabData | null>(null);
+  const [topics, setTopics] = useState<TopicsResponse | null>(null);
   const [listItems, setListItems] = useState<SuperChatItem[]>([]);
   const [page, setPage] = useState(1);
   const [listTotal, setListTotal] = useState(0);
@@ -383,13 +432,16 @@ export function RevenueTab({ videoId }: RevenueTabProps) {
       setLoading(true);
       setPage(1);
       try {
-        const { data: tabData, isMock: mock } =
-          await getRevenueTabDataWithFallback(videoId);
+        const [{ data: tabData, isMock: mock }, topicsResult] = await Promise.all([
+          getRevenueTabDataWithFallback(videoId),
+          getTopicsWithFallback(videoId),
+        ]);
         if (!cancelled) {
           setData(tabData);
+          setTopics(topicsResult.data);
           setListItems(tabData.superChats.items);
           setListTotal(tabData.superChats.pagination.total);
-          setIsMock(mock);
+          setIsMock(mock || topicsResult.isMock);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -451,9 +503,14 @@ export function RevenueTab({ videoId }: RevenueTabProps) {
     );
   }
 
-  const hasSuperChats = totalSuperChatCount(data) > 0;
+  const superChatStatus = data.summary.super_chat_status ?? "present";
+  const superChatCount = totalSuperChatCount(data);
+  const showEmptyState =
+    superChatStatus !== "present" || superChatCount === 0;
+  const emptyStatus: Exclude<SuperChatStatus, "present"> =
+    superChatStatus !== "present" ? superChatStatus : "none_in_chat";
 
-  if (!hasSuperChats) {
+  if (showEmptyState) {
     return (
       <div className="space-y-6">
         {isMock ? (
@@ -465,7 +522,10 @@ export function RevenueTab({ videoId }: RevenueTabProps) {
             </AlertDescription>
           </Alert>
         ) : null}
-        <EmptyState />
+        <SuperChatEmptyState
+          status={emptyStatus}
+          message={data.summary.super_chat_status_message}
+        />
       </div>
     );
   }
@@ -483,6 +543,8 @@ export function RevenueTab({ videoId }: RevenueTabProps) {
       ) : null}
 
       <CurrencySummary data={data} />
+
+      {topics ? <TopicSuperChatRanking blocks={topics.items} /> : null}
 
       <Card>
         <CardHeader>

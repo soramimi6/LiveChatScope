@@ -55,6 +55,20 @@ export type VideoStatusResponse = {
   error: { code: string; message: string } | null;
 };
 
+export type DisplayFilter = {
+  exclude_stamp_only: boolean;
+  exclude_ng_keywords: boolean;
+  ng_keywords: string[];
+  excluded_author_ids: string[];
+};
+
+export const DEFAULT_DISPLAY_FILTER: DisplayFilter = {
+  exclude_stamp_only: true,
+  exclude_ng_keywords: false,
+  ng_keywords: [],
+  excluded_author_ids: [],
+};
+
 export type VideoMetaResponse = {
   video_id: string;
   title: string | null;
@@ -65,6 +79,12 @@ export type VideoMetaResponse = {
   analysis_status: string;
   fetched_at: string | null;
   analyzed_at: string | null;
+  display_filter?: DisplayFilter;
+};
+
+export type AnalysisRefilterResponse = {
+  video_id: string;
+  analysis_status: string;
 };
 
 export function createVideo(url: string) {
@@ -80,6 +100,16 @@ export function getVideoStatus(videoId: string) {
 
 export function getVideo(videoId: string) {
   return request<VideoMetaResponse>(`/api/v1/videos/${videoId}`);
+}
+
+export function postAnalysisRefilter(videoId: string, filter: DisplayFilter) {
+  return request<AnalysisRefilterResponse>(
+    `/api/v1/videos/${videoId}/analysis/refilter`,
+    {
+      method: "POST",
+      body: JSON.stringify({ display_filter: filter }),
+    },
+  );
 }
 
 export type SummaryPeak = {
@@ -150,6 +180,18 @@ export async function getSummaryWithFallback(
   }
 }
 
+export async function getTopicsWithFallback(
+  videoId: string,
+): Promise<{ data: TopicsResponse; isMock: boolean }> {
+  try {
+    const data = await getTopics(videoId);
+    return { data, isMock: false };
+  } catch {
+    const { getMockTopics } = await import("@/lib/mocks/topics");
+    return { data: getMockTopics(videoId), isMock: true };
+  }
+}
+
 export type TopicBlock = TopicBlockPreview & {
   super_chat_total: SuperChatTotal[];
 };
@@ -197,6 +239,41 @@ export function getKeywords(videoId: string, limit = 20) {
   return request<KeywordsResponse>(
     `/api/v1/videos/${videoId}/keywords?limit=${limit}`,
   );
+}
+
+export type KeywordBurst = {
+  rank: number;
+  token: string;
+  peak_bucket_start_sec: number;
+  time_text: string;
+  peak_count: number;
+  baseline_count: number;
+  burst_ratio: number;
+  jump_url: string;
+};
+
+export type KeywordBurstsResponse = {
+  video_id: string;
+  items: KeywordBurst[];
+};
+
+export function getKeywordBursts(videoId: string, limit = 10) {
+  return request<KeywordBurstsResponse>(
+    `/api/v1/videos/${videoId}/keywords/bursts?limit=${limit}`,
+  );
+}
+
+export async function getKeywordBurstsWithFallback(
+  videoId: string,
+  limit = 10,
+): Promise<{ data: KeywordBurstsResponse; isMock: boolean }> {
+  try {
+    const data = await getKeywordBursts(videoId, limit);
+    return { data, isMock: false };
+  } catch {
+    const { getMockKeywordBursts } = await import("@/lib/mocks/topics");
+    return { data: getMockKeywordBursts(videoId, limit), isMock: true };
+  }
 }
 
 export type TopicsTabData = {

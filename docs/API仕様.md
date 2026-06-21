@@ -463,6 +463,8 @@
 ```json
 {
   "video_id": "VIDEO_ID",
+  "super_chat_status": "none_in_chat",
+  "super_chat_status_message": "この配信のチャット上では…",
   "by_currency": [
     { "currency": "JPY", "total_amount": 50000, "count": 12 }
   ],
@@ -471,6 +473,8 @@
   ]
 }
 ```
+
+`super_chat_status`: `present` | `none_in_chat` | `amount_parse_failed`（UX-05）
 
 ---
 
@@ -564,6 +568,35 @@
 | markdown-* | `text/markdown` |
 
 第一弾: ファイルダウンロード + フロントでのコピー用に同一 body を返す。
+
+**JSON (`export_version: 2`)**: 動画メタ、`density`, `authors`, `super_chats`, **全 `messages`**, 分析完了時は `highlights`, `topics`, `keywords`, `low_activity`, `stream_summary` を含む。
+
+**CSV**: `messages` のチャットログのみ（集約データは含まない）。収益タブのスパチャ CSV は別途クライアント生成。フィルター適用時は messages のみフィルター済み行を出力。
+
+---
+
+### POST `/api/v1/videos/{id}/analysis/refilter`
+
+表示フィルター変更時に段階 4, 5, 6a, 6b, 7, 8 を再実行（6c 省略）。
+
+**Request**
+
+```json
+{
+  "display_filter": {
+    "exclude_stamp_only": true,
+    "exclude_ng_keywords": false,
+    "ng_keywords": [],
+    "excluded_author_ids": []
+  }
+}
+```
+
+**Response**: `202 Accepted` — `{ video_id, analysis_status: "running", status_url }`
+
+**Errors**: `409` — 初回分析未完了 / 更新中
+
+**GET `/api/v1/videos/{id}`** に `display_filter` オブジェクトを追加。
 
 ---
 

@@ -15,24 +15,30 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { JumpLinkButton } from "@/components/jump-link-button";
+import { KeywordBurstRanking } from "@/components/keyword-burst-ranking";
 import { KpiCard } from "@/components/kpi-card";
 import { TopicTimelineBar } from "@/components/topic-timeline-bar";
-import { getSummaryWithFallback, type SummaryResponse } from "@/lib/api";
+import { TopicSuperChatRanking } from "@/components/topic-super-chat-ranking";
+import {
+  getKeywordBurstsWithFallback,
+  getSummaryWithFallback,
+  getTopicsWithFallback,
+  type KeywordBurstsResponse,
+  type SummaryResponse,
+  type TopicsResponse,
+} from "@/lib/api";
+import { formatSuperChatTotals } from "@/lib/topic-super-chat";
 
 type SummaryTabProps = {
   videoId: string;
   durationSeconds?: number | null;
+  refreshKey?: number;
 };
 
-function formatSuperChatTotals(totals: SummaryResponse["super_chat_total"]): string {
-  if (totals.length === 0) return "—";
-  return totals
-    .map((t) => `${t.amount.toLocaleString()} ${t.currency}（${t.count}件）`)
-    .join(" / ");
-}
-
-export function SummaryTab({ videoId, durationSeconds }: SummaryTabProps) {
+export function SummaryTab({ videoId, durationSeconds, refreshKey = 0 }: SummaryTabProps) {
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
+  const [topics, setTopics] = useState<TopicsResponse | null>(null);
+  const [bursts, setBursts] = useState<KeywordBurstsResponse | null>(null);
   const [isMock, setIsMock] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -40,11 +46,19 @@ export function SummaryTab({ videoId, durationSeconds }: SummaryTabProps) {
     let cancelled = false;
     setLoading(true);
 
-    getSummaryWithFallback(videoId)
-      .then(({ data, isMock: mock }) => {
+    Promise.all([
+      getSummaryWithFallback(videoId),
+      getTopicsWithFallback(videoId),
+      getKeywordBurstsWithFallback(videoId),
+    ])
+      .then(([summaryResult, topicsResult, burstResult]) => {
         if (!cancelled) {
-          setSummary(data);
-          setIsMock(mock);
+          setSummary(summaryResult.data);
+          setTopics(topicsResult.data);
+          setBursts(burstResult.data);
+          setIsMock(
+            summaryResult.isMock || topicsResult.isMock || burstResult.isMock,
+          );
         }
       })
       .finally(() => {
@@ -54,7 +68,7 @@ export function SummaryTab({ videoId, durationSeconds }: SummaryTabProps) {
     return () => {
       cancelled = true;
     };
-  }, [videoId]);
+  }, [videoId, refreshKey]);
 
   if (loading) {
     return (
@@ -127,6 +141,10 @@ export function SummaryTab({ videoId, durationSeconds }: SummaryTabProps) {
         blocks={summary.topic_blocks_preview}
         durationSeconds={durationSeconds}
       />
+
+      {topics ? <TopicSuperChatRanking blocks={topics.items} /> : null}
+
+      {bursts ? <KeywordBurstRanking items={bursts.items} /> : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

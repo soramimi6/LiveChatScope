@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 type ExportMenuProps = {
   videoId: string;
   className?: string;
+  analysisStatus?: string;
 };
 
 type ExportAction = "download" | "copy";
@@ -30,12 +31,23 @@ type ExportAction = "download" | "copy";
 type ExportOption = {
   type: ExportType;
   label: string;
+  description?: string;
   group: "data" | "markdown";
 };
 
 const EXPORT_OPTIONS: ExportOption[] = [
-  { type: "json", label: "JSON", group: "data" },
-  { type: "csv", label: "CSV", group: "data" },
+  {
+    type: "json",
+    label: "JSON — 分析結果一式",
+    description: "密度・話題・キーワード・全メッセージ等を含む",
+    group: "data",
+  },
+  {
+    type: "csv",
+    label: "CSV — チャットログのみ",
+    description: "表計算用。密度・話題などの集約データは含まれません",
+    group: "data",
+  },
   {
     type: "markdown-summary",
     label: "振り返りサマリー",
@@ -54,16 +66,21 @@ const EXPORT_OPTIONS: ExportOption[] = [
 ];
 
 function actionLabel(option: ExportOption, action: ExportAction): string {
-  const verb = action === "download" ? "ダウンロード" : "クリップボードにコピー";
+  const verb = action === "download" ? "DL" : "コピー";
   return `${option.label}を${verb}`;
 }
 
-export function ExportMenu({ videoId, className }: ExportMenuProps) {
+export function ExportMenu({
+  videoId,
+  className,
+  analysisStatus,
+}: ExportMenuProps) {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{
     kind: "success" | "error";
     message: string;
   } | null>(null);
+  const disabledByAnalysis = analysisStatus === "running";
 
   const handleAction = useCallback(
     async (type: ExportType, action: ExportAction) => {
@@ -104,7 +121,7 @@ export function ExportMenu({ videoId, className }: ExportMenuProps) {
               variant="outline"
               size="sm"
               aria-label="分析結果をエクスポート"
-              disabled={busyKey !== null}
+              disabled={busyKey !== null || disabledByAnalysis}
             />
           }
         >
@@ -115,13 +132,17 @@ export function ExportMenu({ videoId, className }: ExportMenuProps) {
           )}
           エクスポート
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="w-72">
           <DropdownMenuGroup>
             <DropdownMenuLabel>データ</DropdownMenuLabel>
+            <p className="px-1.5 pb-1 text-[11px] leading-snug text-muted-foreground">
+              一式が必要なら JSON、チャットログだけなら CSV を選んでください
+            </p>
             {dataOptions.flatMap((option) => [
               <DropdownMenuItem
                 key={`${option.type}:download`}
                 disabled={busyKey !== null}
+                title={option.description}
                 onClick={() => handleAction(option.type, "download")}
               >
                 <Download />
@@ -130,6 +151,7 @@ export function ExportMenu({ videoId, className }: ExportMenuProps) {
               <DropdownMenuItem
                 key={`${option.type}:copy`}
                 disabled={busyKey !== null}
+                title={option.description}
                 onClick={() => handleAction(option.type, "copy")}
               >
                 <ClipboardCopy />
@@ -161,6 +183,11 @@ export function ExportMenu({ videoId, className }: ExportMenuProps) {
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
+      {disabledByAnalysis ? (
+        <p className="text-xs text-muted-foreground">
+          フィルター更新中はエクスポートできません
+        </p>
+      ) : null}
       {feedback ? (
         <p
           role="status"

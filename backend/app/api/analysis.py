@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from app.api.common import (
     format_time_text,
@@ -8,9 +9,104 @@ from app.api.common import (
     require_analysis_ready,
     utc_now_iso,
 )
+from app.services.analysis.message_filter import serialize_display_filter
+from app.services.analysis.params import load_analysis_defaults
+from app.services.analysis.refilter_pipeline import run_refilter_pipeline
+from app.services.author_profile import build_author_profile
+from app.services.super_chat_status import compute_super_chat_status
 from app.db import get_connection
 
 router = APIRouter(prefix="/videos", tags=["analysis"])
+
+
+class DisplayFilterConfig(BaseModel):
+    exclude_stamp_only: bool = True
+    exclude_ng_keywords: bool = False
+    ng_keywords: list[str] = Field(default_factory=list)
+    excluded_author_ids: list[str] = Field(default_factory=list)
+
+
+class RefilterRequest(BaseModel):
+    display_filter: DisplayFilterConfig
+
+
+class RefilterResponse(BaseModel):
+    video_id: str
+    analysis_status: str
+    status_url: str
+
+
+@router.post("/{video_id}/analysis/refilter", status_code=202, response_model=RefilterResponse)
+def refilter_analysis(
+    video_id: str,
+    payload: RefilterRequest,
+    background_tasks: BackgroundTasks,
+):
+    row = get_video_row(video_id)
+    if row["fetch_status"] != "fetched":
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": {
+                    "code": "ANALYSIS_NOT_READY",
+                    "message": "チャット取得が完了していません",
+                }
+            },
+        )
+    if row["analysis_status"] == "running":
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": {
+                    "code": "ANALYSIS_RUNNING",
+                    "message": "分析の更新中です",
+                }
+            },
+        )
+    if row["analysis_status"] != "complete":
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": {
+                    "code": "ANALYSIS_NOT_READY",
+                    "message": "初回分析が完了していません",
+                }
+            },
+        )
+
+    filter_json = serialize_display_filter(payload.display_filter.model_dump())
+    with get_connection() as conn:
+        conn.execute(
+            """
+            UPDATE videos
+            SET display_filter_json = ?,
+                analysis_status = 'running',
+                analysis_stage = 4,
+                analysis_error_code = NULL,
+                analysis_error_message = NULL,
+                updated_at = ?
+            WHERE video_id = ?
+            """,
+            (filter_json, utc_now_iso(), video_id),
+        )
+        conn.commit()
+
+    background_tasks.add_task(run_refilter_pipeline, video_id)
+
+    return RefilterResponse(
+        video_id=video_id,
+        analysis_status="running",
+        status_url=f"/api/v1/videos/{video_id}/status",
+    )
+
+
+def _summary_preview_limits() -> tuple[int, int, int]:
+    stage7 = load_analysis_defaults().get("stage7", {})
+    return (
+        int(stage7.get("summary_highlights_n", 5)),
+        int(stage7.get("summary_keywords_n", 10)),
+        int(stage7.get("summary_topic_preview_n", 6)),
+    )
 
 
 def _count_unique_authors(conn, video_id: str) -> int:
@@ -23,6 +119,34 @@ def _count_unique_authors(conn, video_id: str) -> int:
         (video_id,),
     ).fetchone()
     return int(row["cnt"] or 0)
+
+
+def _super_chat_totals_for_range(
+    conn,
+    video_id: str,
+    start_sec: float,
+    end_sec: float,
+) -> list[dict]:
+    """Aggregate super_chat_events within [start_sec, end_sec) grouped by currency."""
+    return [
+        {
+            "currency": row["currency"],
+            "amount": float(row["amount"] or 0),
+            "count": int(row["count"] or 0),
+        }
+        for row in conn.execute(
+            """
+            SELECT currency, SUM(amount) AS amount, COUNT(*) AS count
+            FROM super_chat_events
+            WHERE video_id = ?
+              AND time_in_seconds >= ?
+              AND time_in_seconds < ?
+            GROUP BY currency
+            ORDER BY amount DESC
+            """,
+            (video_id, start_sec, end_sec),
+        ).fetchall()
+    ]
 
 
 @router.get("/{video_id}/summary")
@@ -78,6 +202,7 @@ def get_summary(video_id: str):
         topic_block_count = 0
 
         if is_analysis_complete(row["analysis_status"]):
+            highlights_n, keywords_n, topics_n = _summary_preview_limits()
             top_highlights = [
                 {
                     "rank": hl["rank"],
@@ -92,9 +217,9 @@ def get_summary(video_id: str):
                     FROM highlights
                     WHERE video_id = ?
                     ORDER BY rank ASC
-                    LIMIT 5
+                    LIMIT ?
                     """,
-                    (video_id,),
+                    (video_id, highlights_n),
                 ).fetchall()
             ]
 
@@ -110,9 +235,9 @@ def get_summary(video_id: str):
                     FROM keyword_stats
                     WHERE video_id = ?
                     ORDER BY rank ASC
-                    LIMIT 5
+                    LIMIT ?
                     """,
-                    (video_id,),
+                    (video_id, keywords_n),
                 ).fetchall()
             ]
 
@@ -123,9 +248,9 @@ def get_summary(video_id: str):
                 FROM topic_blocks
                 WHERE video_id = ?
                 ORDER BY block_index ASC
-                LIMIT 5
+                LIMIT ?
                 """,
-                (video_id,),
+                (video_id, topics_n),
             ).fetchall()
             topic_block_count = conn.execute(
                 "SELECT COUNT(*) AS cnt FROM topic_blocks WHERE video_id = ?",
@@ -287,15 +412,9 @@ def get_topics(video_id: str):
                 """,
                 (video_id,),
             ).fetchall():
-                sc_total: list[dict] = []
-                if tb["super_chat_total"] and tb["super_chat_currency"]:
-                    sc_total = [
-                        {
-                            "currency": tb["super_chat_currency"],
-                            "amount": tb["super_chat_total"],
-                            "count": 1,
-                        }
-                    ]
+                sc_total = _super_chat_totals_for_range(
+                    conn, video_id, tb["start_sec"], tb["end_sec"]
+                )
                 items.append(
                     {
                         "block_id": tb["block_id"],
@@ -338,6 +457,44 @@ def get_topic_transitions(video_id: str):
                     ORDER BY at_sec ASC
                     """,
                     (video_id,),
+                ).fetchall()
+            ]
+
+    return {"video_id": video_id, "items": items}
+
+
+@router.get("/{video_id}/keywords/bursts")
+def get_keyword_bursts(
+    video_id: str,
+    limit: int = Query(default=20, ge=1, le=200),
+):
+    row = get_video_row(video_id)
+    require_analysis_ready(row)
+
+    items: list[dict] = []
+    if is_analysis_complete(row["analysis_status"]):
+        with get_connection() as conn:
+            items = [
+                {
+                    "rank": burst["rank"],
+                    "token": burst["token"],
+                    "peak_bucket_start_sec": burst["peak_bucket_start_sec"],
+                    "time_text": format_time_text(burst["peak_bucket_start_sec"]),
+                    "peak_count": burst["peak_count"],
+                    "baseline_count": burst["baseline_count"],
+                    "burst_ratio": burst["burst_ratio"],
+                    "jump_url": jump_url(video_id, burst["peak_bucket_start_sec"]),
+                }
+                for burst in conn.execute(
+                    """
+                    SELECT rank, token, peak_bucket_start_sec, peak_count,
+                           baseline_count, burst_ratio
+                    FROM keyword_bursts
+                    WHERE video_id = ?
+                    ORDER BY rank ASC
+                    LIMIT ?
+                    """,
+                    (video_id, limit),
                 ).fetchall()
             ]
 
@@ -476,6 +633,8 @@ def get_super_chats_summary(video_id: str):
             (video_id,),
         ).fetchall()
 
+        status_fields = compute_super_chat_status(conn, video_id)
+
     timeline_map: dict[int, dict] = {}
     for b in bucket_rows:
         start = b["bucket_start_sec"]
@@ -493,6 +652,7 @@ def get_super_chats_summary(video_id: str):
         "video_id": video_id,
         "by_currency": by_currency,
         "timeline": timeline,
+        **status_fields,
     }
 
 
@@ -529,6 +689,33 @@ def get_authors(
         ]
 
     return {"video_id": video_id, "items": items}
+
+
+@router.get("/{video_id}/authors/{author_id}/profile")
+def get_author_profile(video_id: str, author_id: str):
+    row = get_video_row(video_id)
+    require_analysis_ready(row)
+
+    if not is_analysis_complete(row["analysis_status"]):
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": {
+                    "code": "ANALYSIS_NOT_READY",
+                    "message": "分析が完了していません",
+                }
+            },
+        )
+
+    with get_connection() as conn:
+        profile = build_author_profile(conn, video_id, author_id)
+        if profile is None:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": {"code": "NOT_FOUND", "message": "投稿者が見つかりません"}},
+            )
+
+    return profile
 
 
 @router.get("/{video_id}/authors/by-topic/{block_id}")

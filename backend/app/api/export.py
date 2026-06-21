@@ -5,12 +5,30 @@ import json
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 
-from app.api.common import format_time_text, get_video_row, jump_url, require_analysis_ready
+from app.api.common import (
+    format_time_text,
+    get_video_row,
+    is_analysis_complete,
+    jump_url,
+    require_analysis_ready,
+)
 from app.api.export_names import export_download_filename
 from app.db import get_connection
-from app.services.analysis.stage8 import _build_markdown_clips, _build_markdown_thanks
+from app.services.analysis.message_filter import (
+    is_filter_active,
+    load_video_display_filter,
+    should_include_for_keyword_analysis,
+)
+from app.services.analysis.params import load_analysis_defaults
+from app.services.analysis.stage8 import (
+    _build_markdown_clips,
+    _build_markdown_summary,
+    _build_markdown_thanks,
+)
 
 router = APIRouter(prefix="/videos", tags=["export"])
+
+EXPORT_VERSION = 2
 
 VALID_EXPORT_TYPES = {
     "json",
@@ -64,7 +82,18 @@ def export_video(
         return Response(content=body, media_type="text/csv; charset=utf-8", headers=headers)
 
     if export_type == "markdown-summary":
-        body = _build_markdown_summary(video_id, row)
+        title = row["title"] or video_id
+        with get_connection() as conn:
+            summary_row = conn.execute(
+                "SELECT summary_json FROM stream_summary WHERE video_id = ?",
+                (video_id,),
+            ).fetchone()
+            body = _build_markdown_summary(conn, video_id, title, row, summary_row)
+        if row["analysis_status"] != "complete":
+            body = (
+                body.rstrip()
+                + "\n\n> A+ 分析（話題・ハイライト等）は未完了のため、このエクスポートには含まれていません。\n"
+            )
     elif export_type == "markdown-clips":
         if row["analysis_status"] == "complete":
             title = row["title"] or video_id
@@ -89,8 +118,16 @@ def export_video(
     return Response(content=body, media_type="text/markdown; charset=utf-8", headers=headers)
 
 
+def _message_passes_display_filter(msg, filter_cfg: dict, params: dict) -> bool:
+    if not is_filter_active(filter_cfg):
+        return True
+    return should_include_for_keyword_analysis(msg, filter_cfg, params)
+
+
 def _build_json_export(video_id: str, row) -> str:
+    params = load_analysis_defaults()
     with get_connection() as conn:
+        display_filter = load_video_display_filter(conn, video_id, params)
         density = [
             {"bucket_start_sec": b["bucket_start_sec"], "count": b["count"]}
             for b in conn.execute(
@@ -123,10 +160,12 @@ def _build_json_export(video_id: str, row) -> str:
         super_chats = [
             {
                 "time_in_seconds": sc["time_in_seconds"],
+                "time_text": format_time_text(sc["time_in_seconds"]),
                 "author_name": sc["author_name"],
                 "amount": sc["amount"],
                 "currency": sc["currency"],
                 "message": sc["text"],
+                "jump_url": jump_url(video_id, sc["time_in_seconds"]),
             }
             for sc in conn.execute(
                 """
@@ -138,36 +177,164 @@ def _build_json_export(video_id: str, row) -> str:
                 (video_id,),
             ).fetchall()
         ]
+        messages = [
+            {
+                "message_id": msg["message_id"],
+                "time_in_seconds": msg["time_in_seconds"],
+                "time_text": format_time_text(msg["time_in_seconds"] or 0.0),
+                "author_id": msg["author_id"],
+                "author_name": msg["author_name"],
+                "message_type": msg["message_type"],
+                "text": msg["text"],
+                "super_chat_amount": msg["super_chat_amount"],
+                "super_chat_currency": msg["super_chat_currency"],
+                "jump_url": jump_url(video_id, msg["time_in_seconds"] or 0.0),
+            }
+            for msg in conn.execute(
+                """
+                SELECT message_id, time_in_seconds, author_id, author_name,
+                       message_type, text, super_chat_amount, super_chat_currency
+                FROM messages
+                WHERE video_id = ?
+                ORDER BY time_in_seconds ASC, id ASC
+                """,
+                (video_id,),
+            ).fetchall()
+            if _message_passes_display_filter(msg, display_filter, params)
+        ]
 
-    payload = {
+        highlights: list[dict] = []
+        topics: list[dict] = []
+        keywords: list[dict] = []
+        low_activity: list[dict] = []
+        stream_summary = None
+
+        if is_analysis_complete(row["analysis_status"]):
+            highlights = [
+                {
+                    "rank": hl["rank"],
+                    "time_in_seconds": hl["time_in_seconds"],
+                    "time_text": format_time_text(hl["time_in_seconds"]),
+                    "score": hl["score"],
+                    "clip_start_sec": hl["clip_start_sec"],
+                    "clip_end_sec": hl["clip_end_sec"],
+                    "jump_url": jump_url(video_id, hl["time_in_seconds"]),
+                }
+                for hl in conn.execute(
+                    """
+                    SELECT rank, time_in_seconds, score, clip_start_sec, clip_end_sec
+                    FROM highlights
+                    WHERE video_id = ?
+                    ORDER BY rank ASC
+                    """,
+                    (video_id,),
+                ).fetchall()
+            ]
+            topics = [
+                {
+                    "block_id": tb["block_id"],
+                    "block_index": tb["block_index"],
+                    "start_sec": tb["start_sec"],
+                    "end_sec": tb["end_sec"],
+                    "label": tb["label"],
+                    "message_count": tb["message_count"],
+                    "unique_authors": tb["unique_authors"],
+                    "super_chat_total": tb["super_chat_total"],
+                    "super_chat_currency": tb["super_chat_currency"],
+                    "jump_url": jump_url(video_id, tb["start_sec"]),
+                }
+                for tb in conn.execute(
+                    """
+                    SELECT block_id, block_index, start_sec, end_sec, label,
+                           message_count, unique_authors, super_chat_total, super_chat_currency
+                    FROM topic_blocks
+                    WHERE video_id = ?
+                    ORDER BY block_index ASC
+                    """,
+                    (video_id,),
+                ).fetchall()
+            ]
+            keywords = [
+                {"token": kw["token"], "count": kw["count"], "rank": kw["rank"]}
+                for kw in conn.execute(
+                    """
+                    SELECT token, count, rank
+                    FROM keyword_stats
+                    WHERE video_id = ?
+                    ORDER BY rank ASC
+                    """,
+                    (video_id,),
+                ).fetchall()
+            ]
+            low_activity = [
+                {
+                    "start_sec": seg["start_sec"],
+                    "end_sec": seg["end_sec"],
+                    "duration_sec": seg["duration_sec"],
+                    "avg_density": seg["avg_density"],
+                    "start_jump_url": jump_url(video_id, seg["start_sec"]),
+                }
+                for seg in conn.execute(
+                    """
+                    SELECT start_sec, end_sec, duration_sec, avg_density
+                    FROM low_activity_segments
+                    WHERE video_id = ?
+                    ORDER BY start_sec ASC
+                    """,
+                    (video_id,),
+                ).fetchall()
+            ]
+            summary_row = conn.execute(
+                "SELECT summary_json FROM stream_summary WHERE video_id = ?",
+                (video_id,),
+            ).fetchone()
+            if summary_row is not None:
+                stream_summary = json.loads(summary_row["summary_json"])
+
+    payload: dict = {
+        "export_version": EXPORT_VERSION,
         "video_id": video_id,
         "title": row["title"],
         "channel_name": row["channel_name"],
+        "duration_seconds": row["duration_seconds"],
         "message_count": row["message_count"],
         "analysis_status": row["analysis_status"],
+        "analyzed_at": row["analyzed_at"],
         "density": density,
         "authors": authors,
         "super_chats": super_chats,
+        "messages": messages,
+        "highlights": highlights,
+        "topics": topics,
+        "keywords": keywords,
+        "low_activity": low_activity,
     }
+    if stream_summary is not None:
+        payload["stream_summary"] = stream_summary
+
     return json.dumps(payload, ensure_ascii=False, indent=2)
 
 
 def _build_csv_export(video_id: str) -> str:
+    params = load_analysis_defaults()
     buffer = io.StringIO()
     writer = csv.writer(buffer)
     writer.writerow(
         ["time_in_seconds", "time_text", "author_name", "message_type", "text", "jump_url"]
     )
     with get_connection() as conn:
+        display_filter = load_video_display_filter(conn, video_id, params)
         for msg in conn.execute(
             """
-            SELECT time_in_seconds, author_name, message_type, text
+            SELECT time_in_seconds, author_name, message_type, text, author_id
             FROM messages
             WHERE video_id = ?
             ORDER BY time_in_seconds ASC, id ASC
             """,
             (video_id,),
         ).fetchall():
+            if not _message_passes_display_filter(msg, display_filter, params):
+                continue
             time_sec = msg["time_in_seconds"] or 0.0
             writer.writerow(
                 [
@@ -180,67 +347,6 @@ def _build_csv_export(video_id: str) -> str:
                 ]
             )
     return buffer.getvalue()
-
-
-def _build_markdown_summary(video_id: str, row) -> str:
-    title = row["title"] or video_id
-    lines = [
-        f"# {title} — 振り返りサマリー",
-        "",
-        f"- 動画 ID: `{video_id}`",
-        f"- チャンネル: {row['channel_name'] or '—'}",
-        f"- メッセージ数: {row['message_count']}",
-        f"- 分析状態: {row['analysis_status']}",
-        "",
-    ]
-
-    with get_connection() as conn:
-        peak = conn.execute(
-            """
-            SELECT bucket_start_sec, count
-            FROM density_buckets
-            WHERE video_id = ?
-            ORDER BY count DESC, bucket_start_sec ASC
-            LIMIT 1
-            """,
-            (video_id,),
-        ).fetchone()
-        if peak:
-            lines.extend(
-                [
-                    "## ピーク",
-                    "",
-                    f"- 時刻: {format_time_text(peak['bucket_start_sec'])}",
-                    f"- 密度: {peak['count']} msg/min",
-                    f"- [ジャンプ]({jump_url(video_id, peak['bucket_start_sec'])})",
-                    "",
-                ]
-            )
-
-        sc_rows = conn.execute(
-            """
-            SELECT currency, total_amount, count
-            FROM super_chat_summary
-            WHERE video_id = ?
-            ORDER BY total_amount DESC
-            """,
-            (video_id,),
-        ).fetchall()
-        if sc_rows:
-            lines.extend(["## スパチャ合計", ""])
-            for sc in sc_rows:
-                lines.append(f"- {sc['currency']}: {sc['total_amount']} ({sc['count']} 件)")
-            lines.append("")
-
-    if row["analysis_status"] != "complete":
-        lines.extend(
-            [
-                "> A+ 分析（話題・ハイライト等）は未完了のため、このエクスポートには含まれていません。",
-                "",
-            ]
-        )
-
-    return "\n".join(lines)
 
 
 def _build_markdown_clips_stub(video_id: str, row) -> str:

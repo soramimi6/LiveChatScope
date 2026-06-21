@@ -40,6 +40,13 @@
     "keyword_min_doc_count": 5,
     "stopwords_file": "stopwords_ja_chat.txt"
   },
+  "stage4b": {
+    "burst_min_peak_count": 5,
+    "burst_min_ratio": 3.0,
+    "burst_baseline_buckets": 3,
+    "burst_min_baseline": 1.0,
+    "burst_top_n": 20
+  },
   "stage5": {
     "topic_distance_metric": "cosine",
     "topic_change_threshold": 0.35,
@@ -59,5 +66,15 @@
     "summary_highlights_n": 5,
     "summary_keywords_n": 10,
     "summary_topic_preview_n": 6
+  },
+  "message_filter": {
+    "default_exclude_stamp_only": true,
+    "allowed_message_types": ["text_message"],
+    "default_ng_keywords": [],
+    "stamp_only_regexes": [
+      "^[\\s]+$",
+      "^(:[\\w-]+:\\s*)+$",
+      "^[\\U0001F300-\\U0001FAFF\\U00002600-\\U000027BF\\s]+$"
+    ]
   }
 }

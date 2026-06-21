@@ -3,6 +3,8 @@ from pydantic import BaseModel, Field
 
 from app.api.common import get_video_row
 from app.db import get_connection
+from app.services.analysis.message_filter import parse_display_filter
+from app.services.analysis.params import load_analysis_defaults
 from app.services.analysis.pipeline import run_analysis_pipeline, stage_label
 from app.services.fetch_worker import fetch_chat_replay
 from app.services.url_parser import InvalidYouTubeURLError, extract_video_id
@@ -39,6 +41,7 @@ class VideoMetaResponse(BaseModel):
     analysis_status: str
     fetched_at: str | None
     analyzed_at: str | None
+    display_filter: dict
 
 
 def _run_fetch_pipeline(video_id: str, source_url: str) -> None:
@@ -100,6 +103,8 @@ def create_video(payload: CreateVideoRequest, background_tasks: BackgroundTasks)
 @router.get("/{video_id}", response_model=VideoMetaResponse)
 def get_video(video_id: str):
     row = get_video_row(video_id)
+    params = load_analysis_defaults()
+    display_filter = parse_display_filter(row["display_filter_json"], params)
     return VideoMetaResponse(
         video_id=row["video_id"],
         title=row["title"],
@@ -110,6 +115,7 @@ def get_video(video_id: str):
         analysis_status=row["analysis_status"],
         fetched_at=row["fetched_at"],
         analyzed_at=row["analyzed_at"],
+        display_filter=display_filter,
     )
 
 

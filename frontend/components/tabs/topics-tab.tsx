@@ -7,9 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { JumpLinkButton } from "@/components/jump-link-button";
+import { KeywordBurstRanking } from "@/components/keyword-burst-ranking";
 import { TopicTimelineBar } from "@/components/topic-timeline-bar";
 import {
+  getKeywordBurstsWithFallback,
   getTopicsTabDataWithFallback,
+  type KeywordBurstsResponse,
   type SuperChatTotal,
   type TopicBlock,
   type TopicTransition,
@@ -20,6 +23,7 @@ import { formatSeconds } from "@/lib/format";
 type TopicsTabProps = {
   videoId: string;
   durationSeconds?: number | null;
+  refreshKey?: number;
 };
 
 function formatSuperChatTotals(totals: SuperChatTotal[]): string {
@@ -62,7 +66,7 @@ function TopicBlocksTable({
             <th className="px-3 py-2 font-medium">開始 – 終了</th>
             <th className="px-3 py-2 font-medium">推定ラベル</th>
             <th className="px-3 py-2 font-medium tabular-nums">コメント</th>
-            <th className="px-3 py-2 font-medium tabular-nums">UC</th>
+            <th className="px-3 py-2 font-medium tabular-nums">ユニーク投稿者</th>
             <th className="px-3 py-2 font-medium">スパチャ</th>
             <th className="px-3 py-2 font-medium">ジャンプ</th>
           </tr>
@@ -173,8 +177,9 @@ function KeywordsSection({ keywords }: { keywords: TopicsTabData["keywords"] }) 
   );
 }
 
-export function TopicsTab({ videoId, durationSeconds }: TopicsTabProps) {
+export function TopicsTab({ videoId, durationSeconds, refreshKey = 0 }: TopicsTabProps) {
   const [data, setData] = useState<TopicsTabData | null>(null);
+  const [bursts, setBursts] = useState<KeywordBurstsResponse | null>(null);
   const [isMock, setIsMock] = useState(false);
   const [loading, setLoading] = useState(true);
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
@@ -183,11 +188,12 @@ export function TopicsTab({ videoId, durationSeconds }: TopicsTabProps) {
     let cancelled = false;
     setLoading(true);
 
-    getTopicsTabDataWithFallback(videoId)
-      .then(({ data: tabData, isMock: mock }) => {
+    Promise.all([getTopicsTabDataWithFallback(videoId), getKeywordBurstsWithFallback(videoId)])
+      .then(([tabResult, burstResult]) => {
         if (!cancelled) {
-          setData(tabData);
-          setIsMock(mock);
+          setData(tabResult.data);
+          setBursts(burstResult.data);
+          setIsMock(tabResult.isMock || burstResult.isMock);
         }
       })
       .finally(() => {
@@ -197,7 +203,7 @@ export function TopicsTab({ videoId, durationSeconds }: TopicsTabProps) {
     return () => {
       cancelled = true;
     };
-  }, [videoId]);
+  }, [videoId, refreshKey]);
 
   const scrollToBlock = (blockId: string) => {
     rowRefs.current[blockId]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -281,6 +287,8 @@ export function TopicsTab({ videoId, durationSeconds }: TopicsTabProps) {
           <KeywordsSection keywords={data.keywords} />
         </CardContent>
       </Card>
+
+      {bursts ? <KeywordBurstRanking items={bursts.items} /> : null}
     </div>
   );
 }

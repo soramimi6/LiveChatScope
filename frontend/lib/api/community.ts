@@ -50,6 +50,42 @@ export type AuthorsByTopicResponse = {
   items: TopicAuthorItem[];
 };
 
+export type AuthorMessageMoment = {
+  time_in_seconds: number;
+  time_text: string;
+  jump_url: string;
+};
+
+export type AuthorProfileTopic = {
+  block_id: string;
+  block_index: number;
+  label: string;
+  message_count: number;
+  jump_url: string;
+};
+
+export type AuthorProfileResponse = {
+  video_id: string;
+  author_id: string;
+  author_name: string;
+  message_count: number;
+  rank: number;
+  is_core_regular: boolean;
+  block_participation: {
+    participated_blocks: number;
+    total_blocks: number;
+    ratio: number;
+  };
+  first_message: AuthorMessageMoment | null;
+  last_message: AuthorMessageMoment | null;
+  super_chat_total: {
+    currency: string;
+    amount: number;
+    count: number;
+  }[];
+  top_topics: AuthorProfileTopic[];
+};
+
 export type CommunityTabData = {
   authors: AuthorsResponse;
   topics: TopicsResponse;
@@ -64,6 +100,12 @@ export function getAuthors(videoId: string, limit = 20) {
 export function getAuthorsByTopic(videoId: string, blockId: string) {
   return request<AuthorsByTopicResponse>(
     `/api/v1/videos/${videoId}/authors/by-topic/${blockId}`,
+  );
+}
+
+export function getAuthorProfile(videoId: string, authorId: string) {
+  return request<AuthorProfileResponse>(
+    `/api/v1/videos/${videoId}/authors/${encodeURIComponent(authorId)}/profile`,
   );
 }
 
@@ -94,5 +136,18 @@ export async function getAuthorsByTopicWithFallback(
   } catch {
     const { getMockAuthorsByTopic } = await import("@/lib/mocks/community");
     return { data: getMockAuthorsByTopic(blockId), isMock: true };
+  }
+}
+
+export async function getAuthorProfileWithFallback(
+  videoId: string,
+  authorId: string,
+): Promise<{ data: AuthorProfileResponse; isMock: boolean }> {
+  try {
+    const data = await getAuthorProfile(videoId, authorId);
+    return { data, isMock: false };
+  } catch {
+    const { getMockAuthorProfile } = await import("@/lib/mocks/community");
+    return { data: getMockAuthorProfile(videoId, authorId), isMock: true };
   }
 }

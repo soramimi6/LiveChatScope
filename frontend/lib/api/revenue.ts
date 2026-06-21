@@ -38,10 +38,14 @@ export type SuperChatTimelineBucket = {
   amount_jpy: number;
 };
 
+export type SuperChatStatus = "none_in_chat" | "amount_parse_failed" | "present";
+
 export type SuperChatSummaryResponse = {
   video_id: string;
   by_currency: SuperChatCurrencySummary[];
   timeline: SuperChatTimelineBucket[];
+  super_chat_status?: SuperChatStatus;
+  super_chat_status_message?: string | null;
 };
 
 export type SuperChatItem = {

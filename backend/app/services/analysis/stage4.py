@@ -4,6 +4,10 @@ from collections import Counter, defaultdict
 
 from janome.tokenizer import Tokenizer
 
+from app.services.analysis.message_filter import (
+    load_video_display_filter,
+    should_include_for_keyword_analysis,
+)
 from app.services.analysis.utils import NOUN_EXCLUDE_SUBTYPES, is_stopword_token, load_stopwords
 
 
@@ -47,9 +51,10 @@ def run_stage4_keywords(conn: sqlite3.Connection, video_id: str, params: dict) -
     conn.execute("DELETE FROM keyword_stats WHERE video_id = ?", (video_id,))
     conn.execute("DELETE FROM keyword_timeline WHERE video_id = ?", (video_id,))
 
+    display_filter = load_video_display_filter(conn, video_id, params)
     messages = conn.execute(
         """
-        SELECT message_id, time_in_seconds, text
+        SELECT message_id, time_in_seconds, text, message_type, author_id
         FROM messages
         WHERE video_id = ?
           AND text IS NOT NULL
@@ -63,6 +68,8 @@ def run_stage4_keywords(conn: sqlite3.Connection, video_id: str, params: dict) -
     token_rows: list[tuple] = []
 
     for msg in messages:
+        if not should_include_for_keyword_analysis(msg, display_filter, params):
+            continue
         text = _normalize_text(msg["text"] or "")
         if not text:
             continue
@@ -86,13 +93,13 @@ def run_stage4_keywords(conn: sqlite3.Connection, video_id: str, params: dict) -
                 bucket_counts[bucket_start][surface] += 1
             token_rows.append((video_id, msg["message_id"], time_sec, bucket_start, surface))
 
-    for video_id_val, message_id, time_sec, bucket_start, token in token_rows:
-        conn.execute(
+    if token_rows:
+        conn.executemany(
             """
             INSERT INTO tokens (video_id, message_id, time_in_seconds, bucket_start_sec, token)
             VALUES (?, ?, ?, ?, ?)
             """,
-            (video_id_val, message_id, time_sec, bucket_start, token),
+            token_rows,
         )
 
     eligible = [(token, count) for token, count in overall_counts.items() if count >= min_doc_count]

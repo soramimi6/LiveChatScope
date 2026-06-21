@@ -105,9 +105,15 @@ def test_e2e_full_analysis_flow():
         assert json_response.status_code == 200, json_response.text
         json_body = json_response.json()
         assert json_body["video_id"] == video_id
+        assert json_body.get("export_version") == 2
         assert json_body.get("message_count", 0) > 0
         assert "density" in json_body
         assert "authors" in json_body
+        assert "messages" in json_body
+        assert len(json_body["messages"]) > 0
+        assert "highlights" in json_body
+        assert "topics" in json_body
+        assert "keywords" in json_body
 
         csv_response = client.get(_api(f"/api/v1/videos/{video_id}/export/csv"))
         assert csv_response.status_code == 200, csv_response.text

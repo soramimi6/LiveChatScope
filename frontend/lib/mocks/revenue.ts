@@ -169,6 +169,8 @@ export function getMockSuperChatSummary(
 
   return {
     video_id: videoId,
+    super_chat_status: "present",
+    super_chat_status_message: null,
     by_currency: [
       {
         currency: "JPY",
@@ -222,6 +224,9 @@ export function getMockEmptyRevenueTabData(videoId: string): RevenueTabData {
   return {
     summary: {
       video_id: videoId,
+      super_chat_status: "none_in_chat",
+      super_chat_status_message:
+        "この配信では Super Chat / Super Thanks のデータが検出されませんでした。",
       by_currency: [],
       timeline: [],
     },
