@@ -120,6 +120,34 @@ def _count_unique_authors(conn, video_id: str) -> int:
     return int(row["cnt"] or 0)
 
 
+def _super_chat_totals_for_range(
+    conn,
+    video_id: str,
+    start_sec: float,
+    end_sec: float,
+) -> list[dict]:
+    """Aggregate super_chat_events within [start_sec, end_sec) grouped by currency."""
+    return [
+        {
+            "currency": row["currency"],
+            "amount": float(row["amount"] or 0),
+            "count": int(row["count"] or 0),
+        }
+        for row in conn.execute(
+            """
+            SELECT currency, SUM(amount) AS amount, COUNT(*) AS count
+            FROM super_chat_events
+            WHERE video_id = ?
+              AND time_in_seconds >= ?
+              AND time_in_seconds < ?
+            GROUP BY currency
+            ORDER BY amount DESC
+            """,
+            (video_id, start_sec, end_sec),
+        ).fetchall()
+    ]
+
+
 @router.get("/{video_id}/summary")
 def get_summary(video_id: str):
     row = get_video_row(video_id)
@@ -383,15 +411,9 @@ def get_topics(video_id: str):
                 """,
                 (video_id,),
             ).fetchall():
-                sc_total: list[dict] = []
-                if tb["super_chat_total"] and tb["super_chat_currency"]:
-                    sc_total = [
-                        {
-                            "currency": tb["super_chat_currency"],
-                            "amount": tb["super_chat_total"],
-                            "count": 1,
-                        }
-                    ]
+                sc_total = _super_chat_totals_for_range(
+                    conn, video_id, tb["start_sec"], tb["end_sec"]
+                )
                 items.append(
                     {
                         "block_id": tb["block_id"],
