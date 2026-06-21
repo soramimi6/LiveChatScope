@@ -29,6 +29,8 @@ class DisplayFilterConfig(BaseModel):
     exclude_stamp_only: bool = True
     exclude_ng_keywords: bool = False
     ng_keywords: list[str] = Field(default_factory=list)
+    auto_ng_keywords: list[str] = Field(default_factory=list)
+    dismissed_auto_ng_keywords: list[str] = Field(default_factory=list)
     excluded_author_ids: list[str] = Field(default_factory=list)
 
 

@@ -10,6 +10,8 @@ DEFAULT_DISPLAY_FILTER: dict[str, Any] = {
     "exclude_stamp_only": True,
     "exclude_ng_keywords": False,
     "ng_keywords": [],
+    "auto_ng_keywords": [],
+    "dismissed_auto_ng_keywords": [],
     "excluded_author_ids": [],
 }
 
@@ -23,6 +25,9 @@ _EMOJI_RE = re.compile(
     flags=re.UNICODE,
 )
 
+# YouTube / コミュニティスタンプのコード表記（例: :stamp: :wave:）
+STAMP_CODE_RE = re.compile(r":[\w-]+:", flags=re.UNICODE)
+
 
 def default_display_filter(params: dict | None = None) -> dict[str, Any]:
     cfg = (params or {}).get("message_filter", {})
@@ -30,6 +35,8 @@ def default_display_filter(params: dict | None = None) -> dict[str, Any]:
         "exclude_stamp_only": bool(cfg.get("default_exclude_stamp_only", True)),
         "exclude_ng_keywords": False,
         "ng_keywords": list(cfg.get("default_ng_keywords", [])),
+        "auto_ng_keywords": [],
+        "dismissed_auto_ng_keywords": [],
         "excluded_author_ids": [],
     }
 
@@ -46,6 +53,10 @@ def parse_display_filter(raw: str | None, params: dict | None = None) -> dict[st
         return base
     merged = {**base, **parsed}
     merged["ng_keywords"] = list(merged.get("ng_keywords") or [])
+    merged["auto_ng_keywords"] = list(merged.get("auto_ng_keywords") or [])
+    merged["dismissed_auto_ng_keywords"] = list(
+        merged.get("dismissed_auto_ng_keywords") or []
+    )
     merged["excluded_author_ids"] = list(merged.get("excluded_author_ids") or [])
     return merged
 
@@ -59,9 +70,52 @@ def is_filter_active(filter_cfg: dict[str, Any]) -> bool:
         return True
     if filter_cfg.get("exclude_ng_keywords") and filter_cfg.get("ng_keywords"):
         return True
+    if filter_cfg.get("auto_ng_keywords"):
+        return True
     if filter_cfg.get("excluded_author_ids"):
         return True
     return False
+
+
+def effective_auto_ng_keywords(
+    detected_tokens: list[str],
+    filter_cfg: dict[str, Any],
+) -> list[str]:
+    dismissed = {
+        token.strip().lower()
+        for token in filter_cfg.get("dismissed_auto_ng_keywords") or []
+        if token.strip()
+    }
+    return sorted(
+        token
+        for token in detected_tokens
+        if token.strip().lower() not in dismissed
+    )
+
+
+def save_auto_ng_keywords(
+    conn,
+    video_id: str,
+    detected_tokens: list[str],
+    params: dict | None = None,
+) -> None:
+    """Persist auto-detected global tokens minus user-dismissed ones."""
+    filter_cfg = load_video_display_filter(conn, video_id, params)
+    effective = effective_auto_ng_keywords(detected_tokens, filter_cfg)
+    filter_cfg["auto_ng_keywords"] = effective
+    manual_ng = filter_cfg.get("ng_keywords") or []
+    if effective:
+        filter_cfg["exclude_ng_keywords"] = True
+    elif not manual_ng:
+        filter_cfg["exclude_ng_keywords"] = False
+    conn.execute(
+        """
+        UPDATE videos
+        SET display_filter_json = ?
+        WHERE video_id = ?
+        """,
+        (serialize_display_filter(filter_cfg), video_id),
+    )
 
 
 def load_video_display_filter(conn, video_id: str, params: dict | None = None) -> dict[str, Any]:
@@ -97,6 +151,17 @@ def is_stamp_only_text(text: str, params: dict | None = None) -> bool:
         if pattern.fullmatch(normalized):
             return True
     return False
+
+
+def is_stamp_code_token(token: str) -> bool:
+    """Return True if the token is a colon-wrapped stamp code (e.g. :laugh:)."""
+    return bool(STAMP_CODE_RE.fullmatch((token or "").strip()))
+
+
+def strip_stamp_codes(text: str) -> str:
+    """Remove stamp code fragments from text before keyword/topic tokenization."""
+    cleaned = STAMP_CODE_RE.sub(" ", text or "")
+    return re.sub(r"\s+", " ", cleaned).strip()
 
 
 def _contains_ng_keyword(text: str, ng_keywords: list[str]) -> bool:

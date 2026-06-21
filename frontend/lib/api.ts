@@ -59,6 +59,8 @@ export type DisplayFilter = {
   exclude_stamp_only: boolean;
   exclude_ng_keywords: boolean;
   ng_keywords: string[];
+  auto_ng_keywords: string[];
+  dismissed_auto_ng_keywords: string[];
   excluded_author_ids: string[];
 };
 
@@ -66,6 +68,8 @@ export const DEFAULT_DISPLAY_FILTER: DisplayFilter = {
   exclude_stamp_only: true,
   exclude_ng_keywords: false,
   ng_keywords: [],
+  auto_ng_keywords: [],
+  dismissed_auto_ng_keywords: [],
   excluded_author_ids: [],
 };
 

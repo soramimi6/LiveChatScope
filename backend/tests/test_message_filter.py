@@ -8,9 +8,13 @@ import pytest
 
 from app.config import settings
 from app.services.analysis.message_filter import (
+    effective_auto_ng_keywords,
+    is_stamp_code_token,
     is_stamp_only_text,
     load_video_display_filter,
+    save_auto_ng_keywords,
     should_include_for_keyword_analysis,
+    strip_stamp_codes,
 )
 
 
@@ -60,6 +64,17 @@ def test_is_stamp_only_detects_colon_stamp_pattern():
 
 def test_is_stamp_only_rejects_normal_text():
     assert not is_stamp_only_text("こんにちは")
+
+
+def test_strip_stamp_codes_removes_colon_tokens():
+    assert strip_stamp_codes("わろた :laugh: :wave:") == "わろた"
+    assert strip_stamp_codes(":stamp:") == ""
+
+
+def test_is_stamp_code_token():
+    assert is_stamp_code_token(":laugh:")
+    assert not is_stamp_code_token("laugh")
+    assert not is_stamp_code_token("わろた")
 
 
 def test_should_exclude_stamp_only_when_enabled():
@@ -122,6 +137,7 @@ def test_load_video_display_filter_uses_defaults_when_null(conn):
     assert cfg["exclude_stamp_only"] is True
     assert cfg["exclude_ng_keywords"] is False
     assert cfg["ng_keywords"] == []
+    assert cfg["auto_ng_keywords"] == []
     assert cfg["excluded_author_ids"] == []
 
 
@@ -144,3 +160,51 @@ def test_load_video_display_filter_parses_saved_json(conn):
     assert cfg["exclude_ng_keywords"] is True
     assert cfg["ng_keywords"] == ["bad"]
     assert cfg["excluded_author_ids"] == ["u1"]
+
+
+def test_save_auto_ng_keywords_persists_and_enables_exclude(conn):
+    save_auto_ng_keywords(conn, "vid1", ["全域語", "配信"])
+    conn.commit()
+
+    cfg = load_video_display_filter(conn, "vid1")
+    assert cfg["auto_ng_keywords"] == ["全域語", "配信"]
+    assert cfg["exclude_ng_keywords"] is True
+    assert cfg["ng_keywords"] == []
+
+
+def test_effective_auto_ng_keywords_respects_dismissed(conn):
+    conn.execute(
+        """
+        UPDATE videos
+        SET display_filter_json = ?
+        WHERE video_id = 'vid1'
+        """,
+        (
+            '{"dismissed_auto_ng_keywords":["全域語"],"auto_ng_keywords":["配信"]}',
+        ),
+    )
+    conn.commit()
+
+    cfg = load_video_display_filter(conn, "vid1")
+    assert effective_auto_ng_keywords(["全域語", "配信", "話題"], cfg) == sorted(
+        ["配信", "話題"]
+    )
+
+
+def test_save_auto_ng_keywords_skips_dismissed(conn):
+    conn.execute(
+        """
+        UPDATE videos
+        SET display_filter_json = ?
+        WHERE video_id = 'vid1'
+        """,
+        ('{"dismissed_auto_ng_keywords":["全域語"]}',),
+    )
+    conn.commit()
+
+    save_auto_ng_keywords(conn, "vid1", ["全域語", "配信"])
+    conn.commit()
+
+    cfg = load_video_display_filter(conn, "vid1")
+    assert cfg["auto_ng_keywords"] == ["配信"]
+    assert cfg["dismissed_auto_ng_keywords"] == ["全域語"]

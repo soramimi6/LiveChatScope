@@ -4,15 +4,26 @@ from collections import Counter, defaultdict
 
 from janome.tokenizer import Tokenizer
 
-from app.services.analysis.message_filter import (
-    load_video_display_filter,
-    should_include_for_keyword_analysis,
+from app.services.analysis.global_token_detection import (
+    build_detection_snapshot,
+    detect_global_tokens,
 )
+from app.services.analysis.message_filter import (
+    effective_auto_ng_keywords,
+    is_stamp_code_token,
+    load_video_display_filter,
+    save_auto_ng_keywords,
+    should_include_for_keyword_analysis,
+    strip_stamp_codes,
+)
+from app.services.analysis.params import save_analysis_params_snapshot
 from app.services.analysis.utils import NOUN_EXCLUDE_SUBTYPES, is_stopword_token, load_stopwords
 
 
-def _normalize_text(text: str) -> str:
+def _normalize_text(text: str, *, exclude_stamp_codes: bool = False) -> str:
     cleaned = re.sub(r"@\S+", " ", text)
+    if exclude_stamp_codes:
+        cleaned = strip_stamp_codes(cleaned)
     return cleaned.strip()
 
 
@@ -52,6 +63,7 @@ def run_stage4_keywords(conn: sqlite3.Connection, video_id: str, params: dict) -
     conn.execute("DELETE FROM keyword_timeline WHERE video_id = ?", (video_id,))
 
     display_filter = load_video_display_filter(conn, video_id, params)
+    exclude_stamp_codes = bool(display_filter.get("exclude_stamp_only"))
     messages = conn.execute(
         """
         SELECT message_id, time_in_seconds, text, message_type, author_id
@@ -65,13 +77,15 @@ def run_stage4_keywords(conn: sqlite3.Connection, video_id: str, params: dict) -
 
     overall_counts: Counter[str] = Counter()
     bucket_counts: dict[int, Counter[str]] = defaultdict(Counter)
+    token_bucket_presence: dict[str, set[int]] = defaultdict(set)
+    active_buckets: set[int] = set()
     token_rows: list[tuple] = []
     persist_tokens = not delete_tokens
 
     for msg in messages:
         if not should_include_for_keyword_analysis(msg, display_filter, params):
             continue
-        text = _normalize_text(msg["text"] or "")
+        text = _normalize_text(msg["text"] or "", exclude_stamp_codes=exclude_stamp_codes)
         if not text:
             continue
         time_sec = msg["time_in_seconds"]
@@ -83,6 +97,8 @@ def run_stage4_keywords(conn: sqlite3.Connection, video_id: str, params: dict) -
             surface = token.surface.strip()
             if len(surface) < min_token_length:
                 continue
+            if exclude_stamp_codes and is_stamp_code_token(surface):
+                continue
             pos_parts = token.part_of_speech.split(",")
             if not _pos_allowed(surface, tuple(pos_parts), include_pos, exclude_pos):
                 continue
@@ -92,8 +108,61 @@ def run_stage4_keywords(conn: sqlite3.Connection, video_id: str, params: dict) -
             overall_counts[surface] += 1
             if bucket_start is not None:
                 bucket_counts[bucket_start][surface] += 1
+                token_bucket_presence[surface].add(bucket_start)
+                active_buckets.add(bucket_start)
             if persist_tokens:
                 token_rows.append((video_id, msg["message_id"], time_sec, bucket_start, surface))
+
+    detection_cfg = stage4.get("global_token_detection", {})
+    coverage_threshold = float(detection_cfg.get("coverage_threshold", 0.8))
+    min_total_count = int(detection_cfg.get("min_total_count", 20))
+    require_top_n = bool(detection_cfg.get("require_top_n", True))
+
+    video_row = conn.execute(
+        "SELECT channel_name FROM videos WHERE video_id = ?",
+        (video_id,),
+    ).fetchone()
+    channel_name = video_row["channel_name"] if video_row is not None else None
+
+    auto_tokens = detect_global_tokens(
+        overall_counts,
+        token_bucket_presence,
+        len(active_buckets),
+        coverage_threshold=coverage_threshold,
+        min_total_count=min_total_count,
+        top_n=top_n_overall,
+        require_top_n=require_top_n,
+        channel_name=channel_name,
+        min_token_length=min_token_length,
+    )
+    effective_auto = effective_auto_ng_keywords(auto_tokens, display_filter)
+    snapshot = build_detection_snapshot(
+        effective_auto,
+        overall_counts,
+        token_bucket_presence,
+        len(active_buckets),
+        coverage_threshold=coverage_threshold,
+        min_total_count=min_total_count,
+    )
+    params.setdefault("stage4", {})["global_token_detection_result"] = snapshot
+    save_analysis_params_snapshot(conn, video_id, params)
+    save_auto_ng_keywords(conn, video_id, auto_tokens, params)
+
+    auto_set = set(effective_auto)
+    if auto_set:
+        overall_counts = Counter(
+            {token: count for token, count in overall_counts.items() if token not in auto_set}
+        )
+        for bucket_start in list(bucket_counts.keys()):
+            bucket_counts[bucket_start] = Counter(
+                {
+                    token: count
+                    for token, count in bucket_counts[bucket_start].items()
+                    if token not in auto_set
+                }
+            )
+        if persist_tokens:
+            token_rows = [row for row in token_rows if row[4] not in auto_set]
 
     if token_rows:
         conn.executemany(
