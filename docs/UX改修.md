@@ -76,7 +76,7 @@
 | 動画メタ | タイトル・チャンネル・尺 | ✅ `video_metadata.py` + `fetch_worker.py` で保存（G-01）。取得直後に UPDATE、尺 null 時は messages から fallback | ヘッダにタイトル・尺表示可能 |
 | `/summary` 件数上限 | `analysis_defaults.json` stage7: keywords **10**, topics preview **6**, highlights **5** | `analysis.py` が highlights / keywords / topic preview すべて **`LIMIT 5` 固定** | UX-07, UX-08 |
 | JSON export `authors` | — | `author_stats` 全行出力だが、Stage 1 は **Top 20 のみ** 保存（`author_top_n=20`） | 「全投稿者」と誤解しやすい |
-| markdown-summary | — | **API**（`export.py`）と **Stage 8 キャッシュ**（`stage8.py`）で内容不一致。DL は API 版 | キーワード・話題はキャッシュのみ |
+| markdown-summary | — | ✅ `export.py` が `stage8._build_markdown_summary` を再利用（G-04）。DL と Stage 8 キャッシュが一致 | UX-23 と連携 |
 | 収益タブ CSV | スーパーチャット専用想定（UI 文脈） | 同一 API `export/csv` → **全 messages** CSV | UX-23 と関連 |
 | `tokens` テーブル | Stage 4 中間データ | `delete_tokens_after_stage4: true` で **Stage 4 後削除** | 再トークナイズは messages からのみ |
 | `GET /videos/{id}` | — | `VideoMetaResponse` に **`source_url` なし**（DB カラムは存在） | UX-27 は API 拡張が必要 |

@@ -99,7 +99,7 @@ flowchart TB
 | **G-01** | 動画メタ未保存（タイトル・チャンネル・尺） | 高 | 中 | ✅ `video_metadata.py` — chat-downloader メタを `videos` に UPDATE |
 | **G-02** | 進捗画面が取得完了で即結果へ（分析中 409） | 高 | 小 | `analyze/…/page.tsx`: 遷移条件を `analysis_status=complete`（または `partial` 以上）に変更。UX-01 と同時 |
 | **G-03** | `/summary` が stage7 設定より LIMIT 5 固定 | 高 | 小 | `analysis.py`: `analysis_defaults.json` の `summary_*_n` を参照、または `stream_summary` を読む — **UX-08** |
-| **G-04** | markdown-summary API と Stage 8 キャッシュ不一致 | 高 | 小 | `export.py` が `stage8._build_markdown_summary` を再利用 — **UX-23** と共通 |
+| **G-04** | markdown-summary API と Stage 8 キャッシュ不一致 | 高 | 小 | ✅ `export.py` が `stage8._build_markdown_summary` を再利用 — **UX-23** と共通 |
 | **G-05** | `partial` 状態が未使用 | 中 | 中 | 将来: 基本分析のみ `partial` — 第一弾では G-02 修正を優先 |
 
 ---
@@ -229,12 +229,13 @@ flowchart TB
 
 ### Phase 0
 - [x] 取得後に `title` / `duration_seconds` が DB に入る（G-01）
-- [ ] 進捗画面は分析完了後に結果へ（G-02）
-- [ ] サマリー API がキーワード 10 件等、設定どおり（UX-08 / G-03）
+- [x] 進捗画面は分析完了後に結果へ（G-02）
+- [x] サマリー API がキーワード 10 件等、設定どおり（UX-08 / G-03）
 - [x] スーパーチャット 0 件時に理由コードが API / UI に出る（UX-05）
+- [x] markdown-summary DL と Stage 8 キャッシュが一致（G-04）
 
 ### Phase 1
-- [ ] UX-02, 04, 13, 22, 27 完了
+- [x] UX-02, 04, 13, 22, 27 完了
 
 ### Phase 2
 - [ ] 構成 TL が全ブロックまたは同等（UX-07）
@@ -319,15 +320,7 @@ flowchart TB
 | **受け入れ条件** | サマリータブに Top キーワード **10 件**（設定値どおり） |
 | **触るファイル** | `backend/app/api/analysis.py`, `frontend/components/tabs/summary-tab.tsx`（自動反映） |
 
-#### G-04 markdown-summary 不一致
-
-| 観点 | 内容 |
-|------|------|
-| **実現可能性** | 高 |
-| **現状** | `export.py` の markdown-summary は peak + SC のみ。`stage8.py` は keywords + topics 含む |
-| **タスク** | `export.py` が `stage8._build_markdown_summary` を再利用 |
-| **受け入れ条件** | DL 版 markdown-summary と Stage 8 キャッシュの内容が一致 |
-| **効く UX** | UX-23 |
+| **G-04** | markdown-summary 不一致 | 高 | 小 | ✅ `export.py` が `stage8._build_markdown_summary` を再利用。分析未完了時の注記は export 側で付与 |
 
 ---
 
@@ -541,7 +534,7 @@ flowchart TB
 |---|------|------|---------|
 | B-01 | `analysis.py` L107–116 | summary API が stage7 設定より LIMIT 5 固定 | UX-08, G-03 |
 | B-02 | `analysis.py` L296 | `/topics` SC count が常に 1 | UX-25 D2 |
-| B-03 | `export.py` vs `stage8.py` | markdown-summary 内容不一致 | UX-23, G-04 |
+| B-03 | ~~`export.py` vs `stage8.py`~~ | ~~markdown-summary 内容不一致~~ → **G-04 解消** | UX-23 |
 | B-04 | `fetch_worker.py` | 動画メタ未 UPDATE | G-01, UX-07, UX-09 |
 | B-05 | `analyze/…/page.tsx` L33–35 | fetch 完了即遷移 → 409 | G-02, UX-01 |
 | B-06 | `export.py` JSON | messages / highlights / topics 未含有 | UX-23 |
