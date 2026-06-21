@@ -12,6 +12,7 @@ from app.api.common import (
 from app.services.analysis.message_filter import serialize_display_filter
 from app.services.analysis.params import load_analysis_defaults
 from app.services.analysis.refilter_pipeline import run_refilter_pipeline
+from app.services.user_settings import save_user_display_filter_defaults
 from app.services.author_profile import build_author_profile
 from app.services.membership_api import (
     author_membership_flags,
@@ -97,6 +98,7 @@ def refilter_analysis(
             """,
             (filter_json, utc_now_iso(), video_id),
         )
+        save_user_display_filter_defaults(conn, payload.display_filter.model_dump())
         conn.commit()
 
     background_tasks.add_task(run_refilter_pipeline, video_id)

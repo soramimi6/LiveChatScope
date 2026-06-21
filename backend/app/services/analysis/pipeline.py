@@ -3,10 +3,7 @@ import time
 from datetime import datetime, timezone
 
 from app.db import get_connection
-from app.services.analysis.message_filter import (
-    default_display_filter,
-    serialize_display_filter,
-)
+from app.services.analysis.message_filter import serialize_display_filter
 from app.services.analysis.params import load_analysis_defaults, save_analysis_params_snapshot
 from app.services.analysis.stage0 import run_stage0_normalize
 from app.services.analysis.stage1 import run_stage1_basic
@@ -161,6 +158,8 @@ def run_analysis_pipeline(video_id: str) -> None:
                 (video_id,),
             ).fetchone()
             if filter_row is not None and filter_row["display_filter_json"] is None:
+                from app.services.user_settings import build_initial_video_display_filter
+
                 conn.execute(
                     """
                     UPDATE videos
@@ -168,7 +167,9 @@ def run_analysis_pipeline(video_id: str) -> None:
                     WHERE video_id = ?
                     """,
                     (
-                        serialize_display_filter(default_display_filter(params)),
+                        serialize_display_filter(
+                            build_initial_video_display_filter(conn, params)
+                        ),
                         video_id,
                     ),
                 )

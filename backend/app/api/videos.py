@@ -5,8 +5,10 @@ from app.api.common import get_video_row
 from app.db import get_connection
 from app.services.analysis.message_filter import parse_display_filter
 from app.services.analysis.params import load_analysis_defaults
+from app.services.analysis.params import load_analysis_defaults
 from app.services.analysis.pipeline import run_analysis_pipeline, stage_label
 from app.services.fetch_worker import fetch_chat_replay
+from app.services.user_settings import apply_user_defaults_to_video
 from app.services.job_recovery import (
     is_job_stale,
     recover_stale_video_job,
@@ -82,6 +84,7 @@ def create_video(payload: CreateVideoRequest, background_tasks: BackgroundTasks)
         ) from exc
 
     source_url = payload.url.strip()
+    params = load_analysis_defaults()
 
     with get_connection() as conn:
         existing = conn.execute(
@@ -103,6 +106,7 @@ def create_video(payload: CreateVideoRequest, background_tasks: BackgroundTasks)
             (video_id, source_url),
         )
         reset_video_for_full_retry(conn, video_id, source_url)
+        apply_user_defaults_to_video(conn, video_id, params)
         conn.commit()
 
     background_tasks.add_task(_run_fetch_pipeline, video_id, source_url)
@@ -167,6 +171,7 @@ def retry_video(video_id: str, background_tasks: BackgroundTasks):
             )
         with get_connection() as conn:
             reset_video_for_full_retry(conn, video_id, source_url)
+            apply_user_defaults_to_video(conn, video_id, load_analysis_defaults())
             conn.commit()
         background_tasks.add_task(_run_fetch_pipeline, video_id, source_url)
         return RetryVideoResponse(
