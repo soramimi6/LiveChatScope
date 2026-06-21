@@ -12,9 +12,9 @@ import {
   type AuthorItem,
   type AuthorsByTopicResponse,
   type CommunityTabData,
-  type TopicAuthorItem,
 } from "@/lib/api/community";
 import type { TopicBlock } from "@/lib/api";
+import { AuthorProfileSheet } from "@/components/author-profile-sheet";
 import { formatSeconds } from "@/lib/format";
 
 type CommunityTabProps = {
@@ -25,7 +25,15 @@ type CommunityTabProps = {
 const CORE_REGULAR_DESCRIPTION =
   "話題ブロックの半数以上で発言が確認された視聴者です。配信全体を通して継続的に参加している常連層を示します。";
 
-function AuthorsTable({ items }: { items: Pick<AuthorItem, "rank" | "author_name" | "message_count">[] }) {
+function AuthorsTable({
+  items,
+  onAuthorClick,
+}: {
+  items: Array<Pick<AuthorItem, "rank" | "author_name" | "message_count"> & {
+    author_id?: string;
+  }>;
+  onAuthorClick?: (author: AuthorItem) => void;
+}) {
   if (items.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">投稿者データがありません。</p>
@@ -44,9 +52,32 @@ function AuthorsTable({ items }: { items: Pick<AuthorItem, "rank" | "author_name
         </thead>
         <tbody>
           {items.map((item) => (
-            <tr key={`${item.rank}-${item.author_name}`} className="border-b last:border-b-0">
+            <tr
+              key={item.author_id ?? `${item.rank}-${item.author_name}`}
+              className="border-b last:border-b-0"
+            >
               <td className="px-3 py-2 tabular-nums text-muted-foreground">{item.rank}</td>
-              <td className="px-3 py-2">{item.author_name}</td>
+              <td className="px-3 py-2">
+                {onAuthorClick && item.author_id ? (
+                  <button
+                    type="button"
+                    className="text-left font-medium underline-offset-4 hover:underline"
+                    onClick={() =>
+                      onAuthorClick({
+                        author_id: item.author_id!,
+                        author_name: item.author_name,
+                        message_count: item.message_count,
+                        rank: item.rank,
+                        is_core_regular: false,
+                      })
+                    }
+                  >
+                    {item.author_name}
+                  </button>
+                ) : (
+                  item.author_name
+                )}
+              </td>
               <td className="px-3 py-2 tabular-nums">{item.message_count.toLocaleString()}</td>
             </tr>
           ))}
@@ -56,7 +87,13 @@ function AuthorsTable({ items }: { items: Pick<AuthorItem, "rank" | "author_name
   );
 }
 
-function CoreRegularSection({ authors }: { authors: AuthorItem[] }) {
+function CoreRegularSection({
+  authors,
+  onAuthorClick,
+}: {
+  authors: AuthorItem[];
+  onAuthorClick?: (author: AuthorItem) => void;
+}) {
   const coreAuthors = authors.filter((author) => author.is_core_regular);
 
   return (
@@ -66,14 +103,28 @@ function CoreRegularSection({ authors }: { authors: AuthorItem[] }) {
         <p className="text-sm text-muted-foreground">常連コア層は検出されませんでした。</p>
       ) : (
         <div className="flex flex-wrap gap-2">
-          {coreAuthors.map((author) => (
-            <Badge key={author.author_id} variant="secondary" className="text-sm">
-              {author.author_name}
-              <span className="ml-1 text-muted-foreground">
-                ({author.message_count.toLocaleString()}件)
-              </span>
-            </Badge>
-          ))}
+          {coreAuthors.map((author) =>
+            onAuthorClick ? (
+              <button
+                key={author.author_id}
+                type="button"
+                className="inline-flex items-center rounded-full border border-transparent bg-secondary px-2.5 py-0.5 text-sm text-secondary-foreground hover:bg-secondary/80"
+                onClick={() => onAuthorClick(author)}
+              >
+                {author.author_name}
+                <span className="ml-1 text-muted-foreground">
+                  ({author.message_count.toLocaleString()}件)
+                </span>
+              </button>
+            ) : (
+              <Badge key={author.author_id} variant="secondary" className="text-sm">
+                {author.author_name}
+                <span className="ml-1 text-muted-foreground">
+                  ({author.message_count.toLocaleString()}件)
+                </span>
+              </Badge>
+            ),
+          )}
         </div>
       )}
     </div>
@@ -180,7 +231,7 @@ function TopicAuthorsSection({
       {loading ? (
         <Skeleton className="h-48 w-full rounded-lg" />
       ) : (
-        <AuthorsTable items={(topicAuthors?.items ?? []) as TopicAuthorItem[]} />
+        <AuthorsTable items={topicAuthors?.items ?? []} />
       )}
     </div>
   );
@@ -191,6 +242,13 @@ export function CommunityTab({ videoId, refreshKey = 0 }: CommunityTabProps) {
   const [isMock, setIsMock] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedBlockId, setSelectedBlockId] = useState("");
+  const [selectedAuthor, setSelectedAuthor] = useState<AuthorItem | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  const openAuthorProfile = (author: AuthorItem) => {
+    setSelectedAuthor(author);
+    setProfileOpen(true);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -249,7 +307,7 @@ export function CommunityTab({ videoId, refreshKey = 0 }: CommunityTabProps) {
           <CardTitle>全体 Top 投稿者</CardTitle>
         </CardHeader>
         <CardContent>
-          <AuthorsTable items={data.authors.items} />
+          <AuthorsTable items={data.authors.items} onAuthorClick={openAuthorProfile} />
         </CardContent>
       </Card>
 
@@ -258,7 +316,7 @@ export function CommunityTab({ videoId, refreshKey = 0 }: CommunityTabProps) {
           <CardTitle>常連コア層</CardTitle>
         </CardHeader>
         <CardContent>
-          <CoreRegularSection authors={data.authors.items} />
+          <CoreRegularSection authors={data.authors.items} onAuthorClick={openAuthorProfile} />
         </CardContent>
       </Card>
 
@@ -277,6 +335,14 @@ export function CommunityTab({ videoId, refreshKey = 0 }: CommunityTabProps) {
           />
         </CardContent>
       </Card>
+
+      <AuthorProfileSheet
+        videoId={videoId}
+        authorId={selectedAuthor?.author_id ?? null}
+        authorName={selectedAuthor?.author_name}
+        open={profileOpen}
+        onOpenChange={setProfileOpen}
+      />
     </div>
   );
 }

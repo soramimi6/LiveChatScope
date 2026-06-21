@@ -12,6 +12,7 @@ from app.api.common import (
 from app.services.analysis.message_filter import serialize_display_filter
 from app.services.analysis.params import load_analysis_defaults
 from app.services.analysis.refilter_pipeline import run_refilter_pipeline
+from app.services.author_profile import build_author_profile
 from app.services.super_chat_status import compute_super_chat_status
 from app.db import get_connection
 
@@ -688,6 +689,33 @@ def get_authors(
         ]
 
     return {"video_id": video_id, "items": items}
+
+
+@router.get("/{video_id}/authors/{author_id}/profile")
+def get_author_profile(video_id: str, author_id: str):
+    row = get_video_row(video_id)
+    require_analysis_ready(row)
+
+    if not is_analysis_complete(row["analysis_status"]):
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": {
+                    "code": "ANALYSIS_NOT_READY",
+                    "message": "分析が完了していません",
+                }
+            },
+        )
+
+    with get_connection() as conn:
+        profile = build_author_profile(conn, video_id, author_id)
+        if profile is None:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": {"code": "NOT_FOUND", "message": "投稿者が見つかりません"}},
+            )
+
+    return profile
 
 
 @router.get("/{video_id}/authors/by-topic/{block_id}")

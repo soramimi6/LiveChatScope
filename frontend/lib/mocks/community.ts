@@ -1,9 +1,11 @@
 import type {
+  AuthorProfileResponse,
   AuthorsByTopicResponse,
   AuthorsResponse,
   CommunityTabData,
 } from "@/lib/api/community";
 import { getMockTopics } from "@/lib/mocks/topics";
+import { youtubeJumpUrl } from "@/lib/format";
 
 const MOCK_AUTHORS = [
   { author_id: "UC-mock-01", author_name: "たろう", message_count: 186, rank: 1, is_core_regular: true },
@@ -86,5 +88,49 @@ export function getMockCommunityTabData(videoId: string): CommunityTabData {
   return {
     authors: getMockAuthors(videoId),
     topics: getMockTopics(videoId),
+  };
+}
+
+export function getMockAuthorProfile(
+  videoId: string,
+  authorId: string,
+): AuthorProfileResponse {
+  const author =
+    MOCK_AUTHORS.find((item) => item.author_id === authorId) ?? MOCK_AUTHORS[0];
+  const topics = getMockTopics(videoId).items;
+
+  return {
+    video_id: videoId,
+    author_id: author.author_id,
+    author_name: author.author_name,
+    message_count: author.message_count,
+    rank: author.rank,
+    is_core_regular: author.is_core_regular,
+    block_participation: {
+      participated_blocks: author.is_core_regular ? 4 : 2,
+      total_blocks: topics.length,
+      ratio: author.is_core_regular ? 0.8 : 0.4,
+    },
+    first_message: {
+      time_in_seconds: 120,
+      time_text: "00:02:00",
+      jump_url: youtubeJumpUrl(videoId, 120),
+    },
+    last_message: {
+      time_in_seconds: 5400,
+      time_text: "01:30:00",
+      jump_url: youtubeJumpUrl(videoId, 5400),
+    },
+    super_chat_total:
+      author.author_name === "スパチャ王"
+        ? [{ currency: "JPY", amount: 10000, count: 3 }]
+        : [],
+    top_topics: topics.slice(0, 3).map((topic, index) => ({
+      block_id: topic.block_id,
+      block_index: topic.block_index,
+      label: topic.label,
+      message_count: Math.max(author.message_count - index * 12, 1),
+      jump_url: topic.jump_url,
+    })),
   };
 }
