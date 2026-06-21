@@ -1,0 +1,19 @@
+---
+description: Fetch-spec changes require DB and cache purge
+globs:
+  - backend/app/services/fetch_worker.py
+  - backend/app/services/chat_message_types.py
+  - backend/app/services/fetch_spec.py
+alwaysApply: false
+---
+
+# Fetch spec changes → purge stale data
+
+When chat ingestion or normalization changes (e.g. `CHAT_MESSAGE_GROUPS`, `MESSAGE_TYPE_CANONICAL`, fetch worker logic):
+
+1. **Bump** `FETCH_SPEC_VERSION` in `backend/app/services/fetch_spec.py`.
+2. **Do not** ask the user to clear manually — startup runs `ensure_fetch_spec_current()` via `init_db()` and deletes all videos + `data/exports/`.
+3. After merging such a change, note in `docs/進捗.md` that affected videos need **re-submit URL** (re-fetch + re-analyze).
+4. Run backend tests; if tests seed DB with old shapes, they use isolated temp DBs and are unaffected.
+
+Legacy DBs without `app_meta.fetch_spec_version` but with video rows are treated as stale and purged on first startup after the bump.

@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from app.config import settings
+from app.services.fetch_spec import ensure_fetch_spec_current
 
 
 def _ensure_migrations(conn: sqlite3.Connection) -> None:
@@ -20,6 +21,7 @@ def init_db() -> None:
     with get_connection() as conn:
         conn.executescript(schema_sql)
         _ensure_migrations(conn)
+        ensure_fetch_spec_current(conn)
         conn.commit()
 
 
