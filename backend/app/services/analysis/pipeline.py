@@ -1,4 +1,5 @@
 import logging
+import time
 from datetime import datetime, timezone
 
 from app.db import get_connection
@@ -84,6 +85,7 @@ def _mark_analysis_failed(video_id: str, exc: Exception) -> None:
 def run_analysis_pipeline(video_id: str) -> None:
     """Run Phase A+ analysis (Stage 0–8) and set analysis_status=complete."""
     params = load_analysis_defaults()
+    pipeline_started = time.perf_counter()
 
     try:
         with get_connection() as conn:
@@ -91,50 +93,67 @@ def run_analysis_pipeline(video_id: str) -> None:
             save_analysis_params_snapshot(conn, video_id, params)
             conn.commit()
 
+        stage_started = time.perf_counter()
         with get_connection() as conn:
             run_stage0_normalize(conn, video_id, params)
             _set_analysis_progress(conn, video_id, status="running", stage=1)
             conn.commit()
+        logger.info("Analysis stage 0 finished in %.1fs for %s", time.perf_counter() - stage_started, video_id)
 
+        stage_started = time.perf_counter()
         with get_connection() as conn:
             run_stage1_basic(conn, video_id, params)
             _set_analysis_progress(conn, video_id, status="running", stage=3)
             conn.commit()
+        logger.info("Analysis stage 1 finished in %.1fs for %s", time.perf_counter() - stage_started, video_id)
 
+        stage_started = time.perf_counter()
         with get_connection() as conn:
             run_stage3_super_chat(conn, video_id, params)
             run_stage3b_membership(conn, video_id, params)
             _set_analysis_progress(conn, video_id, status="running", stage=2)
             conn.commit()
+        logger.info("Analysis stage 3 finished in %.1fs for %s", time.perf_counter() - stage_started, video_id)
 
+        stage_started = time.perf_counter()
         with get_connection() as conn:
             run_stage2_highlights(conn, video_id, params)
             _set_analysis_progress(conn, video_id, status="running", stage=4)
             conn.commit()
+        logger.info("Analysis stage 2 finished in %.1fs for %s", time.perf_counter() - stage_started, video_id)
 
+        stage_started = time.perf_counter()
         with get_connection() as conn:
             run_stage4_keywords(conn, video_id, params)
             run_stage4b_keyword_bursts(conn, video_id, params)
             _set_analysis_progress(conn, video_id, status="running", stage=5)
             conn.commit()
+        logger.info("Analysis stage 4 finished in %.1fs for %s", time.perf_counter() - stage_started, video_id)
 
+        stage_started = time.perf_counter()
         with get_connection() as conn:
             run_stage5_topic_blocks(conn, video_id, params)
             _set_analysis_progress(conn, video_id, status="running", stage=6)
             conn.commit()
+        logger.info("Analysis stage 5 finished in %.1fs for %s", time.perf_counter() - stage_started, video_id)
 
+        stage_started = time.perf_counter()
         with get_connection() as conn:
             run_stage6a_topic_transitions(conn, video_id, params)
             run_stage6b_topic_authors(conn, video_id, params)
             run_stage6c_low_activity(conn, video_id, params)
             _set_analysis_progress(conn, video_id, status="running", stage=7)
             conn.commit()
+        logger.info("Analysis stage 6 finished in %.1fs for %s", time.perf_counter() - stage_started, video_id)
 
+        stage_started = time.perf_counter()
         with get_connection() as conn:
             run_stage7_summary(conn, video_id, params)
             _set_analysis_progress(conn, video_id, status="running", stage=8)
             conn.commit()
+        logger.info("Analysis stage 7 finished in %.1fs for %s", time.perf_counter() - stage_started, video_id)
 
+        stage_started = time.perf_counter()
         with get_connection() as conn:
             run_stage8_exports(conn, video_id, params)
             filter_row = conn.execute(
@@ -167,6 +186,12 @@ def run_analysis_pipeline(video_id: str) -> None:
                 (_utc_now(), _utc_now(), video_id),
             )
             conn.commit()
+        logger.info("Analysis stage 8 finished in %.1fs for %s", time.perf_counter() - stage_started, video_id)
+        logger.info(
+            "Analysis pipeline finished in %.1fs for %s",
+            time.perf_counter() - pipeline_started,
+            video_id,
+        )
     except Exception as exc:
         logger.exception("Analysis pipeline failed for %s", video_id)
         _mark_analysis_failed(video_id, exc)

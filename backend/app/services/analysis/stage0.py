@@ -61,4 +61,4 @@ def run_stage0_normalize(conn: sqlite3.Connection, video_id: str, params: dict) 
             (video_id,),
         )
 
-    conn.execute("INSERT INTO messages_fts(messages_fts) VALUES('rebuild')")
+    # FTS triggers keep the index in sync; full rebuild runs once after bulk fetch.

@@ -66,6 +66,7 @@ def run_stage4_keywords(conn: sqlite3.Connection, video_id: str, params: dict) -
     overall_counts: Counter[str] = Counter()
     bucket_counts: dict[int, Counter[str]] = defaultdict(Counter)
     token_rows: list[tuple] = []
+    persist_tokens = not delete_tokens
 
     for msg in messages:
         if not should_include_for_keyword_analysis(msg, display_filter, params):
@@ -91,7 +92,8 @@ def run_stage4_keywords(conn: sqlite3.Connection, video_id: str, params: dict) -
             overall_counts[surface] += 1
             if bucket_start is not None:
                 bucket_counts[bucket_start][surface] += 1
-            token_rows.append((video_id, msg["message_id"], time_sec, bucket_start, surface))
+            if persist_tokens:
+                token_rows.append((video_id, msg["message_id"], time_sec, bucket_start, surface))
 
     if token_rows:
         conn.executemany(
@@ -107,15 +109,20 @@ def run_stage4_keywords(conn: sqlite3.Connection, video_id: str, params: dict) -
     ranked_overall = eligible[:top_n_overall]
     overall_rank_tokens = {token for token, _ in ranked_overall}
 
-    for rank, (token, count) in enumerate(ranked_overall, start=1):
-        conn.execute(
+    stats_rows = [
+        (video_id, token, count, rank)
+        for rank, (token, count) in enumerate(ranked_overall, start=1)
+    ]
+    if stats_rows:
+        conn.executemany(
             """
             INSERT INTO keyword_stats (video_id, token, count, rank)
             VALUES (?, ?, ?, ?)
             """,
-            (video_id, token, count, rank),
+            stats_rows,
         )
 
+    timeline_rows: list[tuple] = []
     for bucket_start in sorted(bucket_counts.keys()):
         bucket_items = [
             (token, count)
@@ -124,13 +131,13 @@ def run_stage4_keywords(conn: sqlite3.Connection, video_id: str, params: dict) -
         ]
         bucket_items.sort(key=lambda item: (-item[1], item[0]))
         for token, count in bucket_items[:top_n_timeline]:
-            conn.execute(
-                """
-                INSERT INTO keyword_timeline (video_id, bucket_start_sec, token, count)
-                VALUES (?, ?, ?, ?)
-                """,
-                (video_id, bucket_start, token, count),
-            )
+            timeline_rows.append((video_id, bucket_start, token, count))
 
-    if delete_tokens:
-        conn.execute("DELETE FROM tokens WHERE video_id = ?", (video_id,))
+    if timeline_rows:
+        conn.executemany(
+            """
+            INSERT INTO keyword_timeline (video_id, bucket_start_sec, token, count)
+            VALUES (?, ?, ?, ?)
+            """,
+            timeline_rows,
+        )
