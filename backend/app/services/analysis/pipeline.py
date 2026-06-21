@@ -12,6 +12,7 @@ from app.services.analysis.stage1 import run_stage1_basic
 from app.services.analysis.stage2 import run_stage2_highlights
 from app.services.analysis.stage3 import run_stage3_super_chat
 from app.services.analysis.stage4 import run_stage4_keywords
+from app.services.analysis.stage4b import run_stage4b_keyword_bursts
 from app.services.analysis.stage5 import run_stage5_topic_blocks
 from app.services.analysis.stage6a import run_stage6a_topic_transitions
 from app.services.analysis.stage6b import run_stage6b_topic_authors
@@ -111,6 +112,7 @@ def run_analysis_pipeline(video_id: str) -> None:
 
         with get_connection() as conn:
             run_stage4_keywords(conn, video_id, params)
+            run_stage4b_keyword_bursts(conn, video_id, params)
             _set_analysis_progress(conn, video_id, status="running", stage=5)
             conn.commit()
 

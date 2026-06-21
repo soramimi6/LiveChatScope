@@ -462,6 +462,44 @@ def get_topic_transitions(video_id: str):
     return {"video_id": video_id, "items": items}
 
 
+@router.get("/{video_id}/keywords/bursts")
+def get_keyword_bursts(
+    video_id: str,
+    limit: int = Query(default=20, ge=1, le=200),
+):
+    row = get_video_row(video_id)
+    require_analysis_ready(row)
+
+    items: list[dict] = []
+    if is_analysis_complete(row["analysis_status"]):
+        with get_connection() as conn:
+            items = [
+                {
+                    "rank": burst["rank"],
+                    "token": burst["token"],
+                    "peak_bucket_start_sec": burst["peak_bucket_start_sec"],
+                    "time_text": format_time_text(burst["peak_bucket_start_sec"]),
+                    "peak_count": burst["peak_count"],
+                    "baseline_count": burst["baseline_count"],
+                    "burst_ratio": burst["burst_ratio"],
+                    "jump_url": jump_url(video_id, burst["peak_bucket_start_sec"]),
+                }
+                for burst in conn.execute(
+                    """
+                    SELECT rank, token, peak_bucket_start_sec, peak_count,
+                           baseline_count, burst_ratio
+                    FROM keyword_bursts
+                    WHERE video_id = ?
+                    ORDER BY rank ASC
+                    LIMIT ?
+                    """,
+                    (video_id, limit),
+                ).fetchall()
+            ]
+
+    return {"video_id": video_id, "items": items}
+
+
 @router.get("/{video_id}/keywords")
 def get_keywords(
     video_id: str,

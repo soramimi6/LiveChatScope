@@ -199,6 +199,20 @@ CREATE TABLE IF NOT EXISTS keyword_timeline (
     PRIMARY KEY (video_id, bucket_start_sec, token)
 );
 
+CREATE TABLE IF NOT EXISTS keyword_bursts (
+    video_id                TEXT NOT NULL REFERENCES videos(video_id) ON DELETE CASCADE,
+    token                   TEXT NOT NULL,
+    peak_bucket_start_sec   INTEGER NOT NULL,
+    peak_count              INTEGER NOT NULL,
+    baseline_count          REAL NOT NULL,
+    burst_ratio             REAL NOT NULL,
+    burst_score             REAL NOT NULL,
+    rank                    INTEGER NOT NULL,
+    PRIMARY KEY (video_id, token, peak_bucket_start_sec)
+);
+
+CREATE INDEX IF NOT EXISTS idx_keyword_bursts_rank ON keyword_bursts(video_id, rank);
+
 -- =============================================================================
 -- Stage 5–6: Topics
 -- =============================================================================
