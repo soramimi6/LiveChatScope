@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { JumpLinkButton } from "@/components/jump-link-button";
 import { KeywordBurstRanking } from "@/components/keyword-burst-ranking";
+import { TopicBlockThumbnail } from "@/components/topic-block-thumbnail";
 import { TopicTimelineBar } from "@/components/topic-timeline-bar";
 import {
   getKeywordBurstsWithFallback,
@@ -47,9 +48,11 @@ function EstimatedLabel({ block }: { block: TopicBlock }) {
 function TopicBlocksTable({
   blocks,
   rowRefs,
+  videoId,
 }: {
   blocks: TopicBlock[];
   rowRefs: MutableRefObject<Record<string, HTMLTableRowElement | null>>;
+  videoId: string;
 }) {
   if (blocks.length === 0) {
     return (
@@ -63,6 +66,7 @@ function TopicBlocksTable({
         <thead>
           <tr className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
             <th className="px-3 py-2 font-medium">#</th>
+            <th className="px-2 py-2 font-medium w-20">サムネイル</th>
             <th className="px-3 py-2 font-medium">開始 – 終了</th>
             <th className="px-3 py-2 font-medium">推定ラベル</th>
             <th className="px-3 py-2 font-medium tabular-nums">コメント</th>
@@ -83,6 +87,13 @@ function TopicBlocksTable({
             >
               <td className="px-3 py-2 tabular-nums text-muted-foreground">
                 {block.block_index + 1}
+              </td>
+              <td className="px-2 py-2">
+                <TopicBlockThumbnail
+                  videoId={videoId}
+                  startSec={block.start_sec}
+                  label={block.label}
+                />
               </td>
               <td className="px-3 py-2 tabular-nums whitespace-nowrap">
                 {formatSeconds(block.start_sec)} – {formatSeconds(block.end_sec)}
@@ -266,7 +277,7 @@ export function TopicsTab({ videoId, durationSeconds, refreshKey = 0 }: TopicsTa
           <CardTitle>話題ブロック一覧</CardTitle>
         </CardHeader>
         <CardContent>
-          <TopicBlocksTable blocks={blocks} rowRefs={rowRefs} />
+          <TopicBlocksTable blocks={blocks} rowRefs={rowRefs} videoId={videoId} />
         </CardContent>
       </Card>
 

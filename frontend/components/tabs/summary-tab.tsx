@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { JumpLinkButton } from "@/components/jump-link-button";
 import { KeywordBurstRanking } from "@/components/keyword-burst-ranking";
 import { KpiCard } from "@/components/kpi-card";
+import { TopicBlockThumbnail } from "@/components/topic-block-thumbnail";
 import { TopicTimelineBar } from "@/components/topic-timeline-bar";
 import { TopicSuperChatRanking } from "@/components/topic-super-chat-ranking";
 import {
@@ -244,7 +245,13 @@ export function SummaryTab({ videoId, durationSeconds, refreshKey = 0 }: Summary
         ) : (
           <div className="flex gap-4 overflow-x-auto pb-2">
             {summary.topic_blocks_preview.map((block) => (
-              <Card key={block.block_id} className="min-w-[16rem] shrink-0">
+              <Card key={block.block_id} className="min-w-[16rem] shrink-0 overflow-hidden">
+                <TopicBlockThumbnail
+                  videoId={videoId}
+                  startSec={block.start_sec}
+                  label={block.label}
+                  className="w-full rounded-none border-0 border-b"
+                />
                 <CardHeader className="space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <CardTitle className="text-sm leading-snug">{block.label}</CardTitle>
