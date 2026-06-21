@@ -150,7 +150,10 @@ export function VideoDashboard() {
             />
           </TabsContent>
           <TabsContent value="highlights">
-            <HighlightsTab videoId={videoId} />
+            <HighlightsTab
+              videoId={videoId}
+              durationSeconds={meta?.duration_seconds}
+            />
           </TabsContent>
           <TabsContent value="revenue">
             <RevenueTab videoId={videoId} />

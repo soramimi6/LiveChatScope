@@ -25,10 +25,11 @@ import {
   type HighlightsTabData,
   type LowActivityItem,
 } from "@/lib/api/highlights";
-import { formatSeconds } from "@/lib/format";
+import { formatSeconds, formatStreamPosition } from "@/lib/format";
 
 type HighlightsTabProps = {
   videoId: string;
+  durationSeconds?: number | null;
 };
 
 type DensityChartPoint = {
@@ -57,7 +58,13 @@ function findBucketCount(
   return nearest.count;
 }
 
-function HighlightsList({ items }: { items: HighlightItem[] }) {
+function HighlightsList({
+  items,
+  durationSeconds,
+}: {
+  items: HighlightItem[];
+  durationSeconds?: number | null;
+}) {
   if (items.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">盛り上がり候補がありません。</p>
@@ -66,7 +73,12 @@ function HighlightsList({ items }: { items: HighlightItem[] }) {
 
   return (
     <ol className="space-y-3">
-      {items.map((item) => (
+      {items.map((item) => {
+        const streamPosition = formatStreamPosition(
+          item.time_in_seconds,
+          durationSeconds,
+        );
+        return (
         <li
           key={item.rank}
           className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-3"
@@ -74,6 +86,11 @@ function HighlightsList({ items }: { items: HighlightItem[] }) {
           <div className="min-w-0 space-y-1">
             <p className="font-medium tabular-nums">
               {item.rank}. {item.time_text}
+              {streamPosition.percent != null ? (
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  {streamPosition.text}
+                </span>
+              ) : null}
             </p>
             <p className="text-xs text-muted-foreground">
               スコア {item.score.toFixed(1)}
@@ -92,7 +109,8 @@ function HighlightsList({ items }: { items: HighlightItem[] }) {
           </div>
           <JumpLinkButton jumpUrl={item.jump_url} timeText={item.time_text} />
         </li>
-      ))}
+        );
+      })}
     </ol>
   );
 }
@@ -221,7 +239,7 @@ function DensityChart({
   );
 }
 
-export function HighlightsTab({ videoId }: HighlightsTabProps) {
+export function HighlightsTab({ videoId, durationSeconds }: HighlightsTabProps) {
   const [data, setData] = useState<HighlightsTabData | null>(null);
   const [isMock, setIsMock] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -333,7 +351,10 @@ export function HighlightsTab({ videoId }: HighlightsTabProps) {
           <CardTitle>盛り上がり候補</CardTitle>
         </CardHeader>
         <CardContent>
-          <HighlightsList items={data.highlights.items} />
+          <HighlightsList
+            items={data.highlights.items}
+            durationSeconds={durationSeconds}
+          />
         </CardContent>
       </Card>
 
