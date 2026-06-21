@@ -240,7 +240,7 @@ flowchart TB
 ### Phase 2
 - [ ] 構成 TL が全ブロックまたは同等（UX-07）
 - [ ] 盛り上がりに配信内位置（UX-09、尺あり時）
-- [ ] JSON/CSV 役割分担 + ExportMenu 説明（UX-23 コア）
+- [x] JSON/CSV 役割分担 + ExportMenu 説明（UX-23 コア）
 - [ ] ロゴ・ヘッダ（UX-26）
 
 ### Phase 3
@@ -399,8 +399,8 @@ flowchart TB
 |------|------|
 | **実現可能性** | 高（機能）/ 中（72k 性能） |
 | **工規模** | 中〜大 |
-| **Backend タスク** | ① JSON に messages, highlights, topics, keywords, low_activity 追加 + `export_version: 2` ② ~~G-04 markdown 統一~~ ✅ ③ 収益タブ用 SC 専用 CSV エンドポイント or クライアント側 SC CSV をラベル明示 |
-| **Frontend タスク** | ExportMenu に `JSON — 分析結果一式` / `CSV — チャットログのみ` + ツールチップ |
+| **Backend タスク** | ① JSON に messages, highlights, topics, keywords, low_activity 追加 + `export_version: 2` ✅ ② ~~G-04 markdown 統一~~ ✅ ③ 収益タブは **スパチャ専用 CSV**（クライアント生成）✅ |
+| **Frontend タスク** | ExportMenu に `JSON — 分析結果一式` / `CSV — チャットログのみ` + 説明文 ✅。収益タブはスパチャ CSV を分離 ✅ |
 | **残未決** | 説明 UI の置き場所（ExportMenu のみ vs 収益タブ vs 初回ツアー）— **ExportMenu + ツールチップを第一候補** |
 | **依存** | UX-24 完了後にフィルター反映版 export |
 | **受け入れ条件** | JSON に分析一式、CSV は messages のみ。ユーザーが役割の違いを UI 上で理解できる |
@@ -537,8 +537,8 @@ flowchart TB
 | B-03 | ~~`export.py` vs `stage8.py`~~ | ~~markdown-summary 内容不一致~~ → **G-04 解消** | UX-23 |
 | B-04 | `fetch_worker.py` | 動画メタ未 UPDATE | G-01, UX-07, UX-09 |
 | B-05 | `analyze/…/page.tsx` L33–35 | fetch 完了即遷移 → 409 | G-02, UX-01 |
-| B-06 | `export.py` JSON | messages / highlights / topics 未含有 | UX-23 |
-| B-07 | `revenue-tab.tsx` | 全 messages CSV API 共用 | UX-23 |
+| B-06 | ~~`export.py` JSON~~ | ~~messages / highlights / topics 未含有~~ → **UX-23 解消** | — |
+| B-07 | ~~`revenue-tab.tsx`~~ | ~~全 messages CSV API 共用~~ → **スパチャ CSV 分離** | — |
 | B-08 | refilter API | **未実装**（greenfield） | UX-24 |
 | B-09 | Stage 4 | トークン逐次 INSERT — 72k でボトルネック | UX-24 性能 |
 | B-10 | `stream_summary` | Stage 7 書込み済みだが summary API 未参照 | UX-08 |

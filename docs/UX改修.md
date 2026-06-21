@@ -76,8 +76,9 @@
 | 動画メタ | タイトル・チャンネル・尺 | ✅ `video_metadata.py` + `fetch_worker.py` で保存（G-01）。取得直後に UPDATE、尺 null 時は messages から fallback | ヘッダにタイトル・尺表示可能 |
 | `/summary` 件数上限 | `analysis_defaults.json` stage7: keywords **10**, topics preview **6**, highlights **5** | `analysis.py` が highlights / keywords / topic preview すべて **`LIMIT 5` 固定** | UX-07, UX-08 |
 | JSON export `authors` | — | `author_stats` 全行出力だが、Stage 1 は **Top 20 のみ** 保存（`author_top_n=20`） | 「全投稿者」と誤解しやすい |
-| markdown-summary | — | ✅ `export.py` が `stage8._build_markdown_summary` を再利用（G-04）。DL と Stage 8 キャッシュが一致 | UX-23 と連携 |
-| 収益タブ CSV | スーパーチャット専用想定（UI 文脈） | 同一 API `export/csv` → **全 messages** CSV | UX-23 と関連 |
+| markdown-summary | — | ✅ `export.py` が `stage8._build_markdown_summary` を再利用（G-04）。DL と Stage 8 キャッシュが一致 | — |
+| JSON export | — | ✅ `export_version: 2` で分析一式（messages, highlights, topics 等） | — |
+| 収益タブ CSV | スーパーチャット専用想定（UI 文脈） | ✅ スパチャ一覧 CSV（クライアント生成）。全ログは ExportMenu CSV | — |
 | `tokens` テーブル | Stage 4 中間データ | `delete_tokens_after_stage4: true` で **Stage 4 後削除** | 再トークナイズは messages からのみ |
 | `GET /videos/{id}` | — | `VideoMetaResponse` に **`source_url` なし**（DB カラムは存在） | UX-27 は API 拡張が必要 |
 
@@ -109,7 +110,7 @@
 | UX-20 | 設定永続化（Phase D） | 📋 | 設定 | Phase D |
 | UX-21 | エクスポートファイル名 | ✅ | エクスポート | — |
 | UX-22 | エクスポートメニュー表記短縮 | ✅ | エクスポート | Quick win |
-| UX-23 | JSON/CSV 役割分担 + 説明 UI | 📋 | エクスポート | エクスポート |
+| UX-23 | JSON/CSV 役割分担 + 説明 UI | ✅ | エクスポート | エクスポート |
 | UX-24 | グローバル表示フィルター（ハイブリッド） | 📋 | 分析+UI | 大手配信 |
 | UX-25 | 差別化（配信者/マネージャー軸） | 📋 | 差別化 | 差別化 |
 | UX-26 | ヘッダ・ロゴ（信頼感・製品感） | 📋 | ブランド | 体験向上 |
@@ -343,7 +344,7 @@
 | **現状** | `export-menu.tsx`: 各形式×「ダウンロード」「クリップボードにコピー」= 10 行 |
 | **案** | 「DL」「コピー」。収益タブ（`CSV ダウンロード` 等）との統一は要判断 |
 
-#### UX-23: JSON / CSV 役割分担 📋 ✅方針確定（Q2）
+#### UX-23: JSON / CSV 役割分担 ✅
 
 **方針（Q2）**: **JSON = 分析結果一式**、**CSV = messages 専用（チャットログ）**。ユーザー向け **説明 UI を追加**（要検討だが必須要件に近い）。
 
@@ -366,9 +367,9 @@
 
 | 項目 | 現状 | 改修後 |
 |------|------|--------|
-| JSON | messages なし | messages + 不足している派生データを追加 |
-| CSV | messages のみ（実質 OK） | 役割を明示。収益タブ経由も同じ定義に統一 |
-| 収益タブ CSV | 全 messages API 共用 | SC 一覧 CSV か messages CSV かラベルで区別 |
+| JSON export | messages なし | ✅ `export_version: 2` で messages / highlights / topics / keywords / low_activity を含有 |
+| CSV | messages のみ（実質 OK） | ✅ 役割を ExportMenu で明示。収益タブは **スパチャ専用 CSV**（クライアント生成） |
+| 収益タブ CSV | 全 messages API 共用 | ✅ スパチャ一覧 CSV に分離。全ログは ExportMenu の CSV へ誘導 |
 
 **触るファイル**: `export.py`, `export-menu.tsx`, `revenue-tab.tsx`, `docs/要件.md`, E2E テスト
 
@@ -489,7 +490,7 @@
 - [x] UX-21: エクスポートファイル名
 - [x] UX-04: UC 表記排除
 - [x] UX-05: SC 0 件時に **理由を UI 明示**（判別可能な場合）
-- [ ] UX-23: JSON 一式 / CSV ログ分担 + **ユーザー向け説明**
+- [x] UX-23: JSON 一式 / CSV ログ分担 + **ユーザー向け説明**
 - [ ] UX-24: ハイブリッドフィルター + **広い再実行（段階 4–8, 6c 除く）** + **更新中 UI**
 - [ ] UX-25 Must: D2, B1, C1
 - [ ] UX-26: 信頼感・製品感のロゴ / ヘッダ

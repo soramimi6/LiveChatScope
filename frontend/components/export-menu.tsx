@@ -30,12 +30,23 @@ type ExportAction = "download" | "copy";
 type ExportOption = {
   type: ExportType;
   label: string;
+  description?: string;
   group: "data" | "markdown";
 };
 
 const EXPORT_OPTIONS: ExportOption[] = [
-  { type: "json", label: "JSON", group: "data" },
-  { type: "csv", label: "CSV", group: "data" },
+  {
+    type: "json",
+    label: "JSON — 分析結果一式",
+    description: "密度・話題・キーワード・全メッセージ等を含む",
+    group: "data",
+  },
+  {
+    type: "csv",
+    label: "CSV — チャットログのみ",
+    description: "表計算用。密度・話題などの集約データは含まれません",
+    group: "data",
+  },
   {
     type: "markdown-summary",
     label: "振り返りサマリー",
@@ -115,13 +126,17 @@ export function ExportMenu({ videoId, className }: ExportMenuProps) {
           )}
           エクスポート
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="w-72">
           <DropdownMenuGroup>
             <DropdownMenuLabel>データ</DropdownMenuLabel>
+            <p className="px-1.5 pb-1 text-[11px] leading-snug text-muted-foreground">
+              一式が必要なら JSON、チャットログだけなら CSV を選んでください
+            </p>
             {dataOptions.flatMap((option) => [
               <DropdownMenuItem
                 key={`${option.type}:download`}
                 disabled={busyKey !== null}
+                title={option.description}
                 onClick={() => handleAction(option.type, "download")}
               >
                 <Download />
@@ -130,6 +145,7 @@ export function ExportMenu({ videoId, className }: ExportMenuProps) {
               <DropdownMenuItem
                 key={`${option.type}:copy`}
                 disabled={busyKey !== null}
+                title={option.description}
                 onClick={() => handleAction(option.type, "copy")}
               >
                 <ClipboardCopy />

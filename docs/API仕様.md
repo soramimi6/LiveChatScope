@@ -569,6 +569,10 @@
 
 第一弾: ファイルダウンロード + フロントでのコピー用に同一 body を返す。
 
+**JSON (`export_version: 2`)**: 動画メタ、`density`, `authors`, `super_chats`, **全 `messages`**, 分析完了時は `highlights`, `topics`, `keywords`, `low_activity`, `stream_summary` を含む。
+
+**CSV**: `messages` のチャットログのみ（集約データは含まない）。収益タブのスパチャ CSV は別途クライアント生成。
+
 ---
 
 ## 6. FastAPI 実装メモ（POC）

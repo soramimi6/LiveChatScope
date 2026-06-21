@@ -20,6 +20,7 @@ import { KpiCard } from "@/components/kpi-card";
 import { JumpLinkButton } from "@/components/jump-link-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  buildThankYouCsv,
   downloadTextFile,
   getRevenueTabDataWithFallback,
   getSuperChats,
@@ -280,16 +281,17 @@ function ExportActions({
       setExporting(type);
       setFeedback(null);
       try {
-        const { content } = await getThankYouExportWithFallback(
-          videoId,
-          type,
-          allItems,
-        );
+        const content =
+          type === "csv"
+            ? buildThankYouCsv(allItems)
+            : (
+                await getThankYouExportWithFallback(videoId, type, allItems)
+              ).content;
         if (mode === "copy") {
           await navigator.clipboard.writeText(content);
           setFeedback(
             type === "csv"
-              ? "CSV をクリップボードにコピーしました"
+              ? "スパチャ CSV をクリップボードにコピーしました"
               : "Markdown をクリップボードにコピーしました",
           );
         } else {
@@ -299,7 +301,9 @@ function ExportActions({
             type === "csv" ? "text/csv;charset=utf-8" : "text/markdown;charset=utf-8",
           );
           setFeedback(
-            type === "csv" ? "CSV をダウンロードしました" : "Markdown をダウンロードしました",
+            type === "csv"
+              ? "スパチャ CSV をダウンロードしました"
+              : "Markdown をダウンロードしました",
           );
         }
       } catch {
@@ -313,24 +317,29 @@ function ExportActions({
 
   return (
     <div className="space-y-2">
+      <p className="text-xs text-muted-foreground">
+        スパチャ CSV はこのタブの一覧のみ。全チャットログはヘッダの CSV — チャットログのみから取得できます。
+      </p>
       <div className="flex flex-wrap gap-2">
         <Button
           variant="outline"
           size="sm"
           disabled={disabled || exporting !== null}
+          title="スーパーチャット一覧のみ（全チャットログではありません）"
           onClick={() => runExport("csv", "copy")}
         >
           <Copy data-icon="inline-start" />
-          CSV コピー
+          スパチャ CSV コピー
         </Button>
         <Button
           variant="outline"
           size="sm"
           disabled={disabled || exporting !== null}
+          title="スーパーチャット一覧のみ（全チャットログではありません）"
           onClick={() => runExport("csv", "download")}
         >
           <Download data-icon="inline-start" />
-          CSV ダウンロード
+          スパチャ CSV DL
         </Button>
         <Button
           variant="outline"
