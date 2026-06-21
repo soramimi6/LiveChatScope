@@ -13,6 +13,15 @@ def _ensure_migrations(conn: sqlite3.Connection) -> None:
     }
     if "display_filter_json" not in columns:
         conn.execute("ALTER TABLE videos ADD COLUMN display_filter_json TEXT")
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS user_settings (
+            user_id TEXT PRIMARY KEY,
+            display_filter_json TEXT NOT NULL,
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+        """
+    )
 
 
 def init_db() -> None:

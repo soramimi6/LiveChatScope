@@ -35,6 +35,12 @@ CREATE TABLE IF NOT EXISTS videos (
 CREATE INDEX IF NOT EXISTS idx_videos_fetch_status ON videos(fetch_status);
 CREATE INDEX IF NOT EXISTS idx_videos_analysis_status ON videos(analysis_status);
 
+CREATE TABLE IF NOT EXISTS user_settings (
+    user_id             TEXT PRIMARY KEY,
+    display_filter_json TEXT NOT NULL,
+    updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS messages (
     id                  INTEGER PRIMARY KEY AUTOINCREMENT,
     video_id            TEXT NOT NULL REFERENCES videos(video_id) ON DELETE CASCADE,
