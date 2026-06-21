@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Info, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -14,9 +14,17 @@ import {
   type CommunityTabData,
 } from "@/lib/api/community";
 import type { TopicBlock } from "@/lib/api";
+import { KpiCard } from "@/components/kpi-card";
+import { JumpLinkButton } from "@/components/jump-link-button";
+import { MembershipTimelineChart } from "@/components/membership-timeline-chart";
 import { AuthorProfileSheet } from "@/components/author-profile-sheet";
 import { formatSeconds } from "@/lib/format";
 import { youtubeChannelUrl } from "@/lib/youtube-channel";
+import type {
+  MembershipEventsResponse,
+  MembershipGiftItem,
+  MembershipRegistrationItem,
+} from "@/lib/api/community";
 
 type CommunityTabProps = {
   videoId: string;
@@ -26,14 +34,174 @@ type CommunityTabProps = {
 const CORE_REGULAR_DESCRIPTION =
   "話題ブロックの半数以上で発言が確認された視聴者です。配信全体を通して継続的に参加している常連層を示します。";
 
-function AuthorsTable({
+function AuthorBadges({
+  registeredDuringStream,
+  usedMembershipGift,
+}: {
+  registeredDuringStream?: boolean;
+  usedMembershipGift?: boolean;
+}) {
+  if (!registeredDuringStream && !usedMembershipGift) {
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {registeredDuringStream ? (
+        <Badge variant="outline" className="text-[10px]">
+          配信中に登録
+        </Badge>
+      ) : null}
+      {usedMembershipGift ? (
+        <Badge variant="outline" className="text-[10px]">
+          ギフト告知
+        </Badge>
+      ) : null}
+    </div>
+  );
+}
+
+function MembershipUserList({
   items,
   onAuthorClick,
 }: {
-  items: Array<Pick<AuthorItem, "rank" | "author_name" | "message_count"> & {
-    author_id?: string;
-  }>;
+  items: Array<MembershipRegistrationItem | MembershipGiftItem>;
   onAuthorClick?: (author: AuthorItem) => void;
+}) {
+  if (items.length === 0) {
+    return <p className="text-sm text-muted-foreground">該当する視聴者はいません。</p>;
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-lg border">
+      <table className="w-full min-w-[420px] text-sm">
+        <thead>
+          <tr className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
+            <th className="px-3 py-2 font-medium">名前</th>
+            <th className="px-3 py-2 font-medium">時刻</th>
+            <th className="px-3 py-2 font-medium">ジャンプ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((item) => (
+            <tr key={item.author_id} className="border-b last:border-b-0">
+              <td className="px-3 py-2">
+                {onAuthorClick ? (
+                  <button
+                    type="button"
+                    className="font-medium underline-offset-4 hover:underline"
+                    onClick={() =>
+                      onAuthorClick({
+                        author_id: item.author_id,
+                        author_name: item.author_name,
+                        message_count: 0,
+                        rank: 0,
+                        is_core_regular: false,
+                        registered_during_stream:
+                          "registered_during_stream" in item
+                            ? item.registered_during_stream
+                            : false,
+                        used_membership_gift:
+                          "used_membership_gift" in item ? item.used_membership_gift : false,
+                      })
+                    }
+                  >
+                    {item.author_name}
+                  </button>
+                ) : (
+                  item.author_name
+                )}
+              </td>
+              <td className="px-3 py-2 tabular-nums">
+                {item.time_unknown ? "時刻不明" : item.time_text}
+              </td>
+              <td className="px-3 py-2">
+                {item.jump_url && item.time_text ? (
+                  <JumpLinkButton jumpUrl={item.jump_url} timeText={item.time_text} size="xs" />
+                ) : (
+                  <span className="text-xs text-muted-foreground">—</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function MembershipBurstContext({ events }: { events: MembershipEventsResponse }) {
+  if (events.bursts.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-3">
+      <h3 className="text-sm font-medium">登録ピーク付近のコンテキスト</h3>
+      <ol className="space-y-3">
+        {events.bursts.map((burst) => (
+          <li key={burst.rank} className="rounded-lg border p-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-medium">
+                #{burst.rank} {burst.peak_time_text} — {burst.peak_count} 人（score{" "}
+                {burst.burst_score.toFixed(1)}）
+              </p>
+              <JumpLinkButton jumpUrl={burst.jump_url} timeText={burst.peak_time_text} size="xs" />
+            </div>
+            <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+              {burst.nearby_topic ? (
+                <p>
+                  近接話題: {burst.nearby_topic.label}（{formatSeconds(burst.nearby_topic.start_sec)} –{" "}
+                  {formatSeconds(burst.nearby_topic.end_sec)}）
+                </p>
+              ) : (
+                <p>近接話題: なし</p>
+              )}
+              {burst.nearby_highlight ? (
+                <p>
+                  近接盛り上がり: 候補 #{burst.nearby_highlight.rank}（
+                  {burst.nearby_highlight.time_text}）
+                </p>
+              ) : (
+                <p>近接盛り上がり: なし</p>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function CollapsibleSection({
+  title,
+  count,
+  children,
+  defaultOpen = false,
+}: {
+  title: string;
+  count: number;
+  children: ReactNode;
+  defaultOpen?: boolean;
+}) {
+  return (
+    <details className="rounded-lg border" open={defaultOpen}>
+      <summary className="cursor-pointer list-none px-4 py-3 font-medium [&::-webkit-details-marker]:hidden">
+        {title}（{count.toLocaleString()} 人）
+      </summary>
+      <div className="border-t px-4 py-3">{children}</div>
+    </details>
+  );
+}
+
+function AuthorsTable({
+  items,
+  onAuthorClick,
+  showBadges = false,
+}: {
+  items: AuthorItem[];
+  onAuthorClick?: (author: AuthorItem) => void;
+  showBadges?: boolean;
 }) {
   if (items.length === 0) {
     return (
@@ -43,43 +211,33 @@ function AuthorsTable({
 
   return (
     <div className="overflow-x-auto rounded-lg border">
-      <table className="w-full min-w-[360px] text-sm">
+      <table className="w-full min-w-[480px] text-sm">
         <thead>
           <tr className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
             <th className="px-3 py-2 font-medium">順位</th>
             <th className="px-3 py-2 font-medium">名前</th>
+            {showBadges ? <th className="px-3 py-2 font-medium">バッジ</th> : null}
             <th className="px-3 py-2 font-medium tabular-nums">件数</th>
           </tr>
         </thead>
         <tbody>
           {items.map((item) => (
-            <tr
-              key={item.author_id ?? `${item.rank}-${item.author_name}`}
-              className="border-b last:border-b-0"
-            >
+            <tr key={item.author_id} className="border-b last:border-b-0">
               <td className="px-3 py-2 tabular-nums text-muted-foreground">{item.rank}</td>
               <td className="px-3 py-2">
                 <div className="flex items-center gap-1.5">
-                  {onAuthorClick && item.author_id ? (
+                  {onAuthorClick ? (
                     <button
                       type="button"
                       className="text-left font-medium underline-offset-4 hover:underline"
-                      onClick={() =>
-                        onAuthorClick({
-                          author_id: item.author_id!,
-                          author_name: item.author_name,
-                          message_count: item.message_count,
-                          rank: item.rank,
-                          is_core_regular: false,
-                        })
-                      }
+                      onClick={() => onAuthorClick(item)}
                     >
                       {item.author_name}
                     </button>
                   ) : (
                     item.author_name
                   )}
-                  {item.author_id && youtubeChannelUrl(item.author_id) ? (
+                  {youtubeChannelUrl(item.author_id) ? (
                     <a
                       href={youtubeChannelUrl(item.author_id)!}
                       target="_blank"
@@ -93,6 +251,14 @@ function AuthorsTable({
                   ) : null}
                 </div>
               </td>
+              {showBadges ? (
+                <td className="px-3 py-2">
+                  <AuthorBadges
+                    registeredDuringStream={item.registered_during_stream}
+                    usedMembershipGift={item.used_membership_gift}
+                  />
+                </td>
+              ) : null}
               <td className="px-3 py-2 tabular-nums">{item.message_count.toLocaleString()}</td>
             </tr>
           ))}
@@ -262,7 +428,17 @@ function TopicAuthorsSection({
       {loading ? (
         <Skeleton className="h-48 w-full rounded-lg" />
       ) : (
-        <AuthorsTable items={topicAuthors?.items ?? []} />
+        <AuthorsTable
+          items={(topicAuthors?.items ?? []).map((item) => ({
+            author_id: item.author_name,
+            author_name: item.author_name,
+            message_count: item.message_count,
+            rank: item.rank,
+            is_core_regular: false,
+            registered_during_stream: false,
+            used_membership_gift: false,
+          }))}
+        />
       )}
     </div>
   );
@@ -333,12 +509,53 @@ export function CommunityTab({ videoId, refreshKey = 0 }: CommunityTabProps) {
         </Alert>
       ) : null}
 
+      <section aria-label="メンバーシップ KPI" className="grid gap-4 sm:grid-cols-2">
+        <KpiCard
+          title="配信中のメンバー登録"
+          value={data.membershipEvents.total_unique.toLocaleString()}
+          description="ユニーク視聴者数（Subscribe は含みません）"
+        />
+        <KpiCard
+          title="ギフト告知を使用"
+          value={data.membershipGifts.total_unique.toLocaleString()}
+          description="ユニーク視聴者数"
+        />
+      </section>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>メンバー登録タイムライン</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <MembershipTimelineChart data={data.membershipEvents} />
+          <MembershipBurstContext events={data.membershipEvents} />
+        </CardContent>
+      </Card>
+
+      <CollapsibleSection
+        title="配信中に登録した視聴者"
+        count={data.membershipEvents.total_unique}
+      >
+        <MembershipUserList
+          items={data.membershipEvents.registrations}
+          onAuthorClick={openAuthorProfile}
+        />
+      </CollapsibleSection>
+
+      <CollapsibleSection title="ギフト告知を使用した視聴者" count={data.membershipGifts.total_unique}>
+        <MembershipUserList items={data.membershipGifts.items} onAuthorClick={openAuthorProfile} />
+      </CollapsibleSection>
+
       <Card>
         <CardHeader>
           <CardTitle>全体 Top 投稿者</CardTitle>
         </CardHeader>
         <CardContent>
-          <AuthorsTable items={data.authors.items} onAuthorClick={openAuthorProfile} />
+          <AuthorsTable
+            items={data.authors.items}
+            onAuthorClick={openAuthorProfile}
+            showBadges
+          />
         </CardContent>
       </Card>
 

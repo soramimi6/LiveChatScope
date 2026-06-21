@@ -11,6 +11,7 @@ from app.services.analysis.stage0 import run_stage0_normalize
 from app.services.analysis.stage1 import run_stage1_basic
 from app.services.analysis.stage2 import run_stage2_highlights
 from app.services.analysis.stage3 import run_stage3_super_chat
+from app.services.analysis.stage3b_membership import run_stage3b_membership
 from app.services.analysis.stage4 import run_stage4_keywords
 from app.services.analysis.stage4b import run_stage4b_keyword_bursts
 from app.services.analysis.stage5 import run_stage5_topic_blocks
@@ -102,6 +103,7 @@ def run_analysis_pipeline(video_id: str) -> None:
 
         with get_connection() as conn:
             run_stage3_super_chat(conn, video_id, params)
+            run_stage3b_membership(conn, video_id, params)
             _set_analysis_progress(conn, video_id, status="running", stage=2)
             conn.commit()
 

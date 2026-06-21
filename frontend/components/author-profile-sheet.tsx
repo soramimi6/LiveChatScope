@@ -92,6 +92,12 @@ export function AuthorProfileSheet({
             {profile.is_core_regular ? (
               <Badge variant="outline">常連コア層</Badge>
             ) : null}
+            {profile.registered_during_stream ? (
+              <Badge variant="outline">配信中に登録</Badge>
+            ) : null}
+            {profile.used_membership_gift ? (
+              <Badge variant="outline">ギフト告知</Badge>
+            ) : null}
             <span className="text-sm text-muted-foreground">
               {profile.message_count.toLocaleString()} 件
             </span>

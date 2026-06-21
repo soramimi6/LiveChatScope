@@ -32,6 +32,8 @@ export type AuthorItem = {
   message_count: number;
   rank: number;
   is_core_regular: boolean;
+  registered_during_stream: boolean;
+  used_membership_gift: boolean;
 };
 
 export type AuthorsResponse = {
@@ -84,12 +86,85 @@ export type AuthorProfileResponse = {
     count: number;
   }[];
   top_topics: AuthorProfileTopic[];
+  registered_during_stream: boolean;
+  used_membership_gift: boolean;
+};
+
+export type MembershipRegistrationItem = {
+  author_id: string;
+  author_name: string;
+  time_in_seconds: number | null;
+  time_text: string | null;
+  time_unknown: boolean;
+  jump_url: string | null;
+  registered_during_stream: boolean;
+};
+
+export type MembershipBurstItem = {
+  rank: number;
+  peak_bucket_start_sec: number;
+  peak_time_text: string;
+  peak_count: number;
+  baseline_count: number;
+  burst_ratio: number;
+  burst_score: number;
+  jump_url: string;
+  nearby_topic: {
+    label: string;
+    start_sec: number;
+    end_sec: number;
+    jump_url: string;
+  } | null;
+  nearby_highlight: {
+    rank: number;
+    time_in_seconds: number;
+    time_text: string;
+    jump_url: string;
+  } | null;
+};
+
+export type MembershipEventsResponse = {
+  video_id: string;
+  total_unique: number;
+  timeline: { bucket_start_sec: number; count: number }[];
+  bursts: MembershipBurstItem[];
+  registrations: MembershipRegistrationItem[];
+};
+
+export type MembershipGiftItem = {
+  author_id: string;
+  author_name: string;
+  time_in_seconds: number | null;
+  time_text: string | null;
+  time_unknown: boolean;
+  jump_url: string | null;
+  used_membership_gift: boolean;
+};
+
+export type MembershipGiftsResponse = {
+  video_id: string;
+  total_unique: number;
+  items: MembershipGiftItem[];
 };
 
 export type CommunityTabData = {
   authors: AuthorsResponse;
   topics: TopicsResponse;
+  membershipEvents: MembershipEventsResponse;
+  membershipGifts: MembershipGiftsResponse;
 };
+
+export function getMembershipEvents(videoId: string) {
+  return request<MembershipEventsResponse>(
+    `/api/v1/videos/${videoId}/membership-events`,
+  );
+}
+
+export function getMembershipGifts(videoId: string) {
+  return request<MembershipGiftsResponse>(
+    `/api/v1/videos/${videoId}/membership-gifts`,
+  );
+}
 
 export function getAuthors(videoId: string, limit = 20) {
   return request<AuthorsResponse>(
@@ -115,11 +190,16 @@ export async function getCommunityTabDataWithFallback(
   videoId: string,
 ): Promise<{ data: CommunityTabData; isMock: boolean }> {
   try {
-    const [authors, topics] = await Promise.all([
+    const [authors, topics, membershipEvents, membershipGifts] = await Promise.all([
       getAuthors(videoId),
       getTopics(videoId),
+      getMembershipEvents(videoId),
+      getMembershipGifts(videoId),
     ]);
-    return { data: { authors, topics }, isMock: false };
+    return {
+      data: { authors, topics, membershipEvents, membershipGifts },
+      isMock: false,
+    };
   } catch {
     const { getMockCommunityTabData } = await import("@/lib/mocks/community");
     return { data: getMockCommunityTabData(videoId), isMock: true };

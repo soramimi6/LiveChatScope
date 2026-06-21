@@ -13,6 +13,11 @@ from app.services.analysis.message_filter import serialize_display_filter
 from app.services.analysis.params import load_analysis_defaults
 from app.services.analysis.refilter_pipeline import run_refilter_pipeline
 from app.services.author_profile import build_author_profile
+from app.services.membership_api import (
+    author_membership_flags,
+    build_membership_events,
+    build_membership_gifts,
+)
 from app.services.super_chat_status import compute_super_chat_status
 from app.db import get_connection
 
@@ -668,6 +673,24 @@ def get_super_chats_summary(video_id: str):
     }
 
 
+@router.get("/{video_id}/membership-events")
+def get_membership_events(video_id: str):
+    row = get_video_row(video_id)
+    require_analysis_ready(row)
+
+    with get_connection() as conn:
+        return build_membership_events(conn, video_id)
+
+
+@router.get("/{video_id}/membership-gifts")
+def get_membership_gifts(video_id: str):
+    row = get_video_row(video_id)
+    require_analysis_ready(row)
+
+    with get_connection() as conn:
+        return build_membership_gifts(conn, video_id)
+
+
 @router.get("/{video_id}/authors")
 def get_authors(
     video_id: str,
@@ -689,16 +712,20 @@ def get_authors(
     params.append(limit)
 
     with get_connection() as conn:
-        items = [
-            {
-                "author_id": a["author_id"],
-                "author_name": a["author_name"],
-                "message_count": a["message_count"],
-                "rank": a["rank"],
-                "is_core_regular": bool(a["is_core_regular"]),
-            }
-            for a in conn.execute(query, params).fetchall()
-        ]
+        rows = conn.execute(query, params).fetchall()
+        items = []
+        for a in rows:
+            flags = author_membership_flags(conn, video_id, a["author_id"])
+            items.append(
+                {
+                    "author_id": a["author_id"],
+                    "author_name": a["author_name"],
+                    "message_count": a["message_count"],
+                    "rank": a["rank"],
+                    "is_core_regular": bool(a["is_core_regular"]),
+                    **flags,
+                }
+            )
 
     return {"video_id": video_id, "items": items}
 
@@ -726,6 +753,7 @@ def get_author_profile(video_id: str, author_id: str):
                 status_code=404,
                 detail={"error": {"code": "NOT_FOUND", "message": "投稿者が見つかりません"}},
             )
+        profile.update(author_membership_flags(conn, video_id, author_id))
 
     return profile
 

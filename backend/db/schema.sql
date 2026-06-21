@@ -289,3 +289,50 @@ CREATE TABLE IF NOT EXISTS analysis_params (
     params_json         TEXT NOT NULL,
     created_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- =============================================================================
+-- Stage 3b: Membership & gift announcements (#5)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS membership_registrations (
+    video_id            TEXT NOT NULL REFERENCES videos(video_id) ON DELETE CASCADE,
+    author_id           TEXT NOT NULL,
+    author_name         TEXT,
+    time_in_seconds     REAL,
+    message_id          TEXT,
+    PRIMARY KEY (video_id, author_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_membership_registrations_time
+    ON membership_registrations(video_id, time_in_seconds);
+
+CREATE TABLE IF NOT EXISTS membership_buckets (
+    video_id            TEXT NOT NULL REFERENCES videos(video_id) ON DELETE CASCADE,
+    bucket_start_sec    INTEGER NOT NULL,
+    bucket_sec          INTEGER NOT NULL DEFAULT 60,
+    count               INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (video_id, bucket_start_sec)
+);
+
+CREATE TABLE IF NOT EXISTS membership_bursts (
+    video_id                TEXT NOT NULL REFERENCES videos(video_id) ON DELETE CASCADE,
+    rank                    INTEGER NOT NULL,
+    peak_bucket_start_sec   INTEGER NOT NULL,
+    peak_count              INTEGER NOT NULL,
+    baseline_count          REAL NOT NULL,
+    burst_ratio             REAL NOT NULL,
+    burst_score             REAL NOT NULL,
+    PRIMARY KEY (video_id, rank)
+);
+
+CREATE TABLE IF NOT EXISTS membership_gift_users (
+    video_id            TEXT NOT NULL REFERENCES videos(video_id) ON DELETE CASCADE,
+    author_id           TEXT NOT NULL,
+    author_name         TEXT,
+    time_in_seconds     REAL,
+    message_id          TEXT,
+    PRIMARY KEY (video_id, author_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_membership_gift_users_time
+    ON membership_gift_users(video_id, time_in_seconds);

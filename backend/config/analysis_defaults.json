@@ -33,6 +33,14 @@
   "stage3": {
     "primary_currency_display": "JPY"
   },
+  "stage3b": {
+    "membership_burst_min_peak_count": 2,
+    "membership_burst_min_ratio": 2.0,
+    "membership_burst_baseline_buckets": 3,
+    "membership_burst_min_baseline": 1.0,
+    "membership_burst_top_n": 5,
+    "proximity_window_sec": 120
+  },
   "stage4": {
     "tokenizer": "janome",
     "include_pos": ["名詞", "動詞", "形容詞", "副詞"],

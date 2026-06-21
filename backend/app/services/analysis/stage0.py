@@ -45,6 +45,16 @@ def run_stage0_normalize(conn: sqlite3.Connection, video_id: str, params: dict) 
     if skip_negative_time:
         conn.execute(
             """
+            UPDATE messages
+            SET time_in_seconds = 0
+            WHERE video_id = ?
+              AND time_in_seconds < 0
+              AND message_type IN ('membership_item', 'sponsorships_gift_purchase_announcement')
+            """,
+            (video_id,),
+        )
+        conn.execute(
+            """
             DELETE FROM messages
             WHERE video_id = ? AND time_in_seconds < 0
             """,
